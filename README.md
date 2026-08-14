@@ -157,7 +157,7 @@ You own selection: update `index` in `onTap` and pass it back as `currentIndex`.
 | `showLabels` | `bool` | `true` | Draw `TabItem.label`. Also applies to water-drop. |
 | `customBarPath` | `TabBarPathBuilder?` | `null` | Used when `shape: custom`. |
 | `safeArea` | `bool` | `true` | Pads only the edge that matches `position`. |
-| `fabConfig` | `TabFabConfig` | center + verySmoothEdge | Docked FAB. Ignored on `container` / `sCurve` / `sDivider`. Water-drop and other flat-top bars cut a circular notch. |
+| `fabConfig` | `TabFabConfig` | center + verySmoothEdge | FAB. Ignored on `container` / `sCurve` / `sDivider`. Only `center` cuts a circular notch and splits tabs; `topLeft` / `topRight` / `left` / `right` sit outside the bar. |
 
 ## TabItem
 
@@ -284,11 +284,18 @@ Without a `controller`, changing `currentIndex` from outside plays the same anim
 
 Center-docked FAB cutout aligned with [animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar) (`CircularNotchedAndCorneredRectangle`, `verySmoothEdge`).
 
-`fabConfig` works on **every shape except** `container` / `sCurve` / `sDivider` (including water-drop). `materialNotch` keeps the reference circular cutout; other flat-top bars get the same docked notch.
+`fabConfig` works on **every shape except** `container` / `sCurve` / `sDivider` (including water-drop). Only `center` cuts a notch.
 
-- FAB diameter 56, notch margin 8; center sits on the bar’s top edge
-- Tabs **split around a center or end gap**
-- Prefer an **even** item count for `center`
+| Effect | How |
+|--------|-----|
+| No FAB | `TabFabLocation.none` |
+| Center docked | `TabFabLocation.center`: notch + tabs split in the middle |
+| Outside top-left / top-right | `TabFabLocation.topLeft` / `topRight` |
+| Outside far left / far right | `TabFabLocation.left` / `right` |
+
+- FAB diameter 56, notch margin 8; `center` sits on the bar’s top edge
+- Only `center` splits tabs. Prefer an **even** item count for `center`
+- Outside locations do not cut a notch or insert a gap
 - Hole is the bar fill; the Scaffold behind it should contrast
 - `cornerRadius: 32` matches the reference
 - Tapping a **tab** plays `itemAnimation`. The FAB stays still on tab switch; tap the FAB for `fabConfig.onTap` (optional pop animation)
@@ -321,7 +328,7 @@ Hanging drip + falling bead, aligned with [water_drop_nav_bar](https://pub.dev/p
 - Taps ignored while animating
 - Bar fill and drip (`indicatorColor`) must differ
 - Drip is painted on horizontal bars only
-- `fabConfig` can dock a center/end FAB; tabs split around the gap and the drip tracks the real slot
+- `fabConfig` can add a FAB; only `center` splits tabs and cuts a notch so the drip tracks the real slot. Outside locations do not insert a gap
 
 ```dart
 shape: TabBarShape.waterDrop,

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'enums.dart';
 
-/// Docked FAB + optional notch. Applies to every [TabBarShape] except
-/// `container` / `sCurve` / `sDivider`. `materialNotch` still uses the
-/// [animated_bottom_navigation_bar] circular cutout; water-drop and other
-/// flat-top bars cut a matching docked notch when [showFab] is true.
+/// Docked or outside FAB. Applies to every [TabBarShape] except
+/// `container` / `sCurve` / `sDivider`. Only [TabFabLocation.center] cuts a
+/// notch and splits the tabs; [TabFabLocation.topLeft] / [topRight] /
+/// [left] / [right] sit outside the bar.
 @immutable
 class TabFabConfig {
   const TabFabConfig({
@@ -18,7 +18,7 @@ class TabFabConfig {
     this.animateOnTap = true,
   });
 
-  /// Where the FAB / gap sits: none, center, or end.
+  /// [TabFabLocation.none] / [center] (docked) / outside corners and sides.
   final TabFabLocation location;
 
   /// Notch shoulder smoothness (`NotchSmoothness`).

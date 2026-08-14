@@ -123,6 +123,23 @@ TabFabConfig _demoFab(
   );
 }
 
+String _fabLocationLabel(TabFabLocation loc) {
+  switch (loc) {
+    case TabFabLocation.none:
+      return 'none';
+    case TabFabLocation.center:
+      return 'center';
+    case TabFabLocation.topLeft:
+      return '左上';
+    case TabFabLocation.topRight:
+      return '右上';
+    case TabFabLocation.left:
+      return '最左';
+    case TabFabLocation.right:
+      return '最右';
+  }
+}
+
 class _FabLocationChips extends StatelessWidget {
   const _FabLocationChips({
     required this.location,
@@ -152,14 +169,14 @@ class _FabLocationChips extends StatelessWidget {
           children: [
             for (final loc in TabFabLocation.values)
               ChoiceChip(
-                label: Text(loc.name),
+                label: Text(_fabLocationLabel(loc)),
                 selected: location == loc,
                 onSelected: (_) => onChanged(loc),
               ),
           ],
         ),
         if (showSmoothness &&
-            location != TabFabLocation.none &&
+            location == TabFabLocation.center &&
             smoothness != null) ...[
           const Padding(
             padding: EdgeInsets.only(top: 8),

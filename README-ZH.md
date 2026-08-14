@@ -157,7 +157,7 @@ class _HomePageState extends State<HomePage> {
 | `showLabels` | `bool` | `true` | 是否画 `TabItem.label`。水滴同样生效。 |
 | `customBarPath` | `TabBarPathBuilder?` | `null` | `shape: custom` 时的路径。 |
 | `safeArea` | `bool` | `true` | 按 `position` 只垫对应边（底栏垫 bottom，顶栏垫 top，侧栏垫 left/right）。 |
-| `fabConfig` | `TabFabConfig` | center + verySmoothEdge | 停靠 FAB。`container` / `sCurve` / `sDivider` 忽略。水滴等平顶栏会挖圆形缺口。 |
+| `fabConfig` | `TabFabConfig` | center + verySmoothEdge | FAB。`container` / `sCurve` / `sDivider` 忽略。仅 `center` 挖圆形缺口并让 Tab 让位；`topLeft` / `topRight` / `left` / `right` 在栏外。 |
 
 ## TabItem
 
@@ -295,19 +295,21 @@ controller.previous(itemCount: items.length);
 
 ### materialNotch
 
-对齐 [animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar) 的挖空 FAB。`fabConfig` 在**除 `container` / `sCurve` / `sDivider` 外的所有外形**上都可用（含水滴）；`materialNotch` 仍用参考包那套圆形缺口。
+对齐 [animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar) 的挖空 FAB。`fabConfig` 在**除 `container` / `sCurve` / `sDivider` 外的所有外形**上都可用（含水滴）；只有 `center` 会挖缺口。
 
 | 效果 | 怎么开 |
 |------|--------|
 | 无 FAB | `TabFabLocation.none` |
-| 居中停靠 | `TabFabLocation.center`（`centerDocked`） |
-| 右侧停靠 | `TabFabLocation.end`（`endDocked`） |
-| 缺口平滑 | `TabNotchSmoothness`：`sharpEdge` / `defaultEdge` / `softEdge` / `smoothEdge` / `verySmoothEdge`（平顶栏 / 水滴 / materialNotch 会挖缺口） |
-| 点 FAB 弹出 | 默认 `animateOnTap: true`：缩放 + 缺口从 0 长出 |
+| 居中停靠 | `TabFabLocation.center`：挖缺口，Tab 从中间让位 |
+| 栏外左上 / 右上 | `TabFabLocation.topLeft` / `topRight` |
+| 栏外最左 / 最右 | `TabFabLocation.left` / `right` |
+| 缺口平滑 | `TabNotchSmoothness`：`sharpEdge` / `defaultEdge` / `softEdge` / `smoothEdge` / `verySmoothEdge`（仅 `center` 时，平顶栏 / 水滴 / materialNotch 会挖缺口） |
+| 点 FAB 弹出 | 默认 `animateOnTap: true`：缩放；`center` 时缺口从 0 长出 |
 | 点 Tab | 只播该项 `itemAnimation`，FAB 不跟着颤 |
 
-- FAB 默认直径 56，缺口边距 8；圆心在栏顶边（一半露出）
-- `center` 时 Tab 从中间拆开；`end` 时空隙在最右侧。**center 建议偶数个** Tab
+- FAB 默认直径 56，缺口边距 8；`center` 时圆心在栏顶边（一半露出）
+- 只有 `center` 会拆开 Tab（空隙在中间）。**center 建议偶数个** Tab
+- 栏外四位置不挖缺口、不拆 Tab
 - 挖空露出的是 Scaffold 背景，需与栏底有对比
 - 圆角建议 `cornerRadius: 32`
 - `onTap` 点的是 Tab；FAB 走 `fabConfig.onTap`
@@ -323,7 +325,7 @@ TabAnimationPro(
   cornerRadius: 32,
   colors: TabColors(fab: Colors.teal, fabIcon: Colors.white),
   fabConfig: TabFabConfig(
-    location: TabFabLocation.center, // none / center / end
+    location: TabFabLocation.center, // none / center / topLeft / topRight / left / right
     smoothness: TabNotchSmoothness.verySmoothEdge,
     onTap: () { /* FAB 点击 */ },
   ),
@@ -352,7 +354,7 @@ itemAnimation: TabItemAnimation.colorTween,
 - 动画过程中忽略点击
 - 栏底色与水滴色（`indicatorColor`）必须不同，否则看不出垂滴
 - 水平栏才画水滴；侧栏仍显示图标文字，不画滴
-- 可用 `fabConfig` 加居中/右侧 FAB；Tab 会给 FAB 让出空隙，水滴落点跟槽位对齐
+- 可用 `fabConfig` 加 FAB；仅 `center` 会让 Tab 让位并挖缺口，水滴落点跟槽位对齐；栏外位置不拆 Tab
 
 ```dart
 TabAnimationPro(

@@ -10,7 +10,7 @@ Initial release of `tab_animation_pro`.
 
 - Regular bars: `fixed`, `rounded`, `squircle`, `floating`, `pill`, `segmented`, `underline`
 - Irregular bars: `convexFixed`, `convexReact`, `concave`, `bubble`, `wave`
-- `materialNotch`: [animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar) cutout. `TabFabLocation` (none / center / end), `TabNotchSmoothness` (sharp–verySmooth), FAB tap pop (scale + notch grow); tab taps animate the item only
+- `materialNotch`: [animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar) cutout. `TabFabLocation` (none / center / outside top-left, top-right, far left, far right), `TabNotchSmoothness` (sharp–verySmooth, notch only for center), FAB tap pop (scale + notch grow); tab taps animate the item only
 - `curvedNotch`: softer notch + small disc that follows the selected tab
 - `waterDrop`: hanging drip + falling bead aligned with [water_drop_nav_bar](https://pub.dev/packages/water_drop_nav_bar). Labels, icons, and badges stay visible; the top drip remains on the selected tab after the drop lands
 - `moonIn` / `moonOut`: crescent cut inward vs bulge outward

@@ -10,7 +10,7 @@
 
 - 规则栏：`fixed`、`rounded`、`squircle`、`floating`、`pill`、`segmented`、`underline`
 - 不规则栏：`convexFixed`、`convexReact`、`concave`、`bubble`、`wave`
-- `materialNotch`：对齐 [animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar)。`TabFabLocation`（none / center / end）、`TabNotchSmoothness`（sharp–verySmooth）、点 FAB 弹出（缩放 + 缺口生长）；点 Tab 只播项动画
+- `materialNotch`：对齐 [animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar)。`TabFabLocation`（none / center / 栏外左上、右上、最左、最右）、`TabNotchSmoothness`（sharp–verySmooth，仅 center 挖缺口）、点 FAB 弹出（缩放 + 缺口生长）；点 Tab 只播项动画
 - `curvedNotch`：柔和凹槽 + 小圆盘跟随选中项
 - `waterDrop`：悬挂水滴 + 下落水珠，对齐 [water_drop_nav_bar](https://pub.dev/packages/water_drop_nav_bar)。文字、图标、徽标保持显示；顶部水滴落点后仍对准当前 Tab
 - `moonIn` / `moonOut`：🌙 往里切 / 往外鼓

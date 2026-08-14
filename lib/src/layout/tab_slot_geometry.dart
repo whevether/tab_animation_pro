@@ -4,8 +4,8 @@ import '../models/enums.dart';
 
 /// Horizontal slot layout when a docked FAB inserts a gap between tabs.
 ///
-/// Center FAB sits in a gap before item `itemCount ~/ 2` (same as
-/// [animated_bottom_navigation_bar]). End FAB sits after the last tab.
+/// Center FAB sits in a gap before item `itemCount ~/ 2`.
+/// Outside FAB locations do not insert a gap.
 class TabSlotGeometry {
   const TabSlotGeometry({
     required this.starts,
@@ -22,7 +22,7 @@ class TabSlotGeometry {
     double gapWidth = 0,
   }) {
     final n = math.max(itemCount, 1);
-    final showGap = location != TabFabLocation.none && gapWidth > 0;
+    final showGap = location.isDockedCenter && gapWidth > 0;
     final tabW = showGap ? (width - gapWidth) / n : width / n;
     final starts = List<double>.filled(n, 0);
     var x = 0.0;
@@ -59,12 +59,14 @@ class TabSlotGeometry {
   double get fabCenterX {
     switch (fabLocation) {
       case TabFabLocation.none:
+      case TabFabLocation.topLeft:
+      case TabFabLocation.topRight:
+      case TabFabLocation.left:
+      case TabFabLocation.right:
         return barWidth / 2;
       case TabFabLocation.center:
         if (starts.isEmpty) return barWidth / 2;
         return left(itemCount ~/ 2) - gapWidth / 2;
-      case TabFabLocation.end:
-        return barWidth - gapWidth / 2;
     }
   }
 }

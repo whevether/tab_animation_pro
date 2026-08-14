@@ -178,6 +178,25 @@ void main() {
     expect(slots.centerX(3), 359);
   });
 
+  test('outside FAB locations do not insert a tab gap', () {
+    for (final loc in [
+      TabFabLocation.none,
+      TabFabLocation.topLeft,
+      TabFabLocation.topRight,
+      TabFabLocation.left,
+      TabFabLocation.right,
+    ]) {
+      final slots = TabSlotGeometry.of(
+        width: 400,
+        itemCount: 4,
+        location: loc,
+        gapWidth: 72,
+      );
+      expect(slots.slotWidth, 100, reason: loc.name);
+      expect(slots.gapWidth, 0, reason: loc.name);
+    }
+  });
+
   test('container and S-curve do not support a docked FAB', () {
     expect(TabBarShape.waterDrop.supportsDockedFab, isTrue);
     expect(TabBarShape.rounded.supportsDockedFab, isTrue);
@@ -234,6 +253,36 @@ void main() {
       ),
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('outside FAB locations build without a notch gap', (tester) async {
+    for (final loc in [
+      TabFabLocation.topLeft,
+      TabFabLocation.topRight,
+      TabFabLocation.left,
+      TabFabLocation.right,
+    ]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            bottomNavigationBar: TabAnimationPro(
+              items: [
+                TabItem(label: 'A', icon: TabGraphic.icon(Icons.home)),
+                TabItem(label: 'B', icon: TabGraphic.icon(Icons.search)),
+                TabItem(label: 'C', icon: TabGraphic.icon(Icons.star)),
+                TabItem(label: 'D', icon: TabGraphic.icon(Icons.person)),
+              ],
+              currentIndex: 0,
+              onTap: (_) {},
+              shape: TabBarShape.rounded,
+              fabConfig: TabFabConfig(location: loc),
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull, reason: loc.name);
+      expect(find.byIcon(Icons.add), findsOneWidget, reason: loc.name);
+    }
   });
 
   test('TabAnimationController notifies', () {

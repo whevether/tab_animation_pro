@@ -61,15 +61,38 @@ extension TabBarShapeFab on TabBarShape {
       this == TabBarShape.concave;
 }
 
-/// Docked FAB slot for bars that [TabBarShapeFab.supportsDockedFab], matching
-/// [animated_bottom_navigation_bar] `GapLocation`.
+/// FAB placement for bars that [TabBarShapeFab.supportsDockedFab].
 enum TabFabLocation {
-  /// No FAB and no notch (rounded bar only).
+  /// No FAB.
   none,
-  /// Center-docked FAB (`FloatingActionButtonLocation.centerDocked`).
+
+  /// Center-docked in the bar (notch + tab gap).
   center,
-  /// End-docked FAB (`FloatingActionButtonLocation.endDocked`).
-  end,
+
+  /// Outside the bar, top-left corner.
+  topLeft,
+
+  /// Outside the bar, top-right corner.
+  topRight,
+
+  /// Outside the bar, far left.
+  left,
+
+  /// Outside the bar, far right.
+  right,
+}
+
+extension TabFabLocationLayout on TabFabLocation {
+  bool get showFab => this != TabFabLocation.none;
+
+  /// Notch + center gap; only [center].
+  bool get isDockedCenter => this == TabFabLocation.center;
+
+  bool get isOutsideTop =>
+      this == TabFabLocation.topLeft || this == TabFabLocation.topRight;
+
+  bool get isOutsideSide =>
+      this == TabFabLocation.left || this == TabFabLocation.right;
 }
 
 /// Notch shoulder curve for [TabBarShape.materialNotch], matching
