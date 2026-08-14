@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../layout/tab_slot_geometry.dart';
 import '../../models/enums.dart';
 import '../../shapes/bar_shapes.dart';
 import 'water_drop_nav_painter.dart';
@@ -18,6 +19,8 @@ class TabIndicatorLayer extends StatelessWidget {
     required this.progress,
     required this.color,
     required this.itemShape,
+    this.slots,
+    this.clipPath,
     this.customPainter,
   });
 
@@ -28,6 +31,8 @@ class TabIndicatorLayer extends StatelessWidget {
   final double progress;
   final Color color;
   final TabItemShape itemShape;
+  final TabSlotGeometry? slots;
+  final Path? clipPath;
   final CustomPainter? customPainter;
 
   @override
@@ -45,6 +50,8 @@ class TabIndicatorLayer extends StatelessWidget {
             progress: progress,
             color: color,
             itemShape: itemShape,
+            slots: slots,
+            clipPath: clipPath,
           ),
       size: Size.infinite,
     );
@@ -60,6 +67,8 @@ class _IndicatorPainter extends CustomPainter {
     required this.progress,
     required this.color,
     required this.itemShape,
+    this.slots,
+    this.clipPath,
   });
 
   final TabIndicatorStyle animation;
@@ -69,13 +78,30 @@ class _IndicatorPainter extends CustomPainter {
   final double progress;
   final Color color;
   final TabItemShape itemShape;
+  final TabSlotGeometry? slots;
+  final Path? clipPath;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final count = math.max(itemCount, 1);
-    final itemW = size.width / count;
-    final from = (previousIndex + 0.5) * itemW;
-    final to = (selectedIndex + 0.5) * itemW;
+    if (clipPath != null) {
+      canvas.save();
+      canvas.clipPath(clipPath!);
+    }
+    try {
+      _paintIndicator(canvas, size);
+    } finally {
+      if (clipPath != null) {
+        canvas.restore();
+      }
+    }
+  }
+
+  void _paintIndicator(Canvas canvas, Size size) {
+    final geometry = slots ??
+        TabSlotGeometry.of(width: size.width, itemCount: itemCount);
+    final itemW = geometry.slotWidth;
+    final from = geometry.centerX(previousIndex);
+    final to = geometry.centerX(selectedIndex);
     final cx = lerpDouble(from, to, progress)!;
     final cy = size.height / 2;
     final paint = Paint()..color = color.withValues(alpha: 0.22);
@@ -88,6 +114,7 @@ class _IndicatorPainter extends CustomPainter {
       case TabIndicatorStyle.liquidMorph:
       case TabIndicatorStyle.chipExpand:
       case TabIndicatorStyle.liquidBlob:
+        if (itemShape == TabItemShape.none) return;
         final widthFactor =
             animation == TabIndicatorStyle.chipExpand ? 0.92 : 0.72;
         final rect = Rect.fromCenter(
@@ -95,13 +122,7 @@ class _IndicatorPainter extends CustomPainter {
           width: itemW * widthFactor,
           height: size.height * 0.62,
         );
-        final path = itemShape == TabItemShape.none
-            ? (Path()
-              ..addRRect(
-                RRect.fromRectAndRadius(rect, Radius.circular(rect.height)),
-              ))
-            : buildItemShapePath(itemShape, rect);
-        canvas.drawPath(path, paint);
+        canvas.drawPath(buildItemShapePath(itemShape, rect), paint);
       case TabIndicatorStyle.slideLine:
       case TabIndicatorStyle.worm:
       case TabIndicatorStyle.snake:
@@ -143,6 +164,7 @@ class _IndicatorPainter extends CustomPainter {
           itemCount: itemCount,
           progress: progress,
           color: color,
+          slots: geometry,
         ).paint(canvas, size);
       case TabIndicatorStyle.starTwinkle:
         // Soft spotlight under stars; stars themselves are feedback overlay.
@@ -188,7 +210,10 @@ class _IndicatorPainter extends CustomPainter {
         oldDelegate.selectedIndex != selectedIndex ||
         oldDelegate.previousIndex != previousIndex ||
         oldDelegate.animation != animation ||
-        oldDelegate.color != color;
+        oldDelegate.color != color ||
+        oldDelegate.itemShape != itemShape ||
+        oldDelegate.slots != slots ||
+        oldDelegate.clipPath != clipPath;
   }
 }
 

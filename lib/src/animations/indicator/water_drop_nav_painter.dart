@@ -2,6 +2,8 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 
+import '../../layout/tab_slot_geometry.dart';
+
 /// Hanging drip silhouette from
 /// https://pub.dev/packages/water_drop_nav_bar `WaterDropPainter`.
 Path buildWaterDropDripPath(Size size) {
@@ -50,6 +52,8 @@ class WaterDropNavPainter extends CustomPainter {
     required this.itemCount,
     required this.progress,
     required this.color,
+    this.slots,
+    this.clipPath,
   });
 
   final int selectedIndex;
@@ -57,15 +61,25 @@ class WaterDropNavPainter extends CustomPainter {
   final int itemCount;
   final double progress;
   final Color color;
+  final TabSlotGeometry? slots;
+
+  /// Bar outline in this painter's coordinates. Clips the flat-top drip so it
+  /// cannot spill into a docked-FAB notch (soft/smooth/verySmooth shoulders).
+  final Path? clipPath;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final count = itemCount < 1 ? 1 : itemCount;
-    final itemW = size.width / count;
+    final geometry = slots ??
+        TabSlotGeometry.of(width: size.width, itemCount: itemCount);
+    final itemW = geometry.slotWidth;
     final t = progress.clamp(0.0, 1.0);
 
     final slide = Curves.linear.transform(_interval(t, 0.0, 0.35));
-    final left = lerpDouble(previousIndex * itemW, selectedIndex * itemW, slide)!;
+    final left = lerpDouble(
+      geometry.left(previousIndex),
+      geometry.left(selectedIndex),
+      slide,
+    )!;
 
     late final double dripW;
     late final double dripH;
@@ -77,6 +91,11 @@ class WaterDropNavPainter extends CustomPainter {
       final m = _interval(t, 0.45, 0.60);
       dripW = lerpDouble(56, 72, m)!;
       dripH = lerpDouble(24, 16, m)!;
+    }
+
+    canvas.save();
+    if (clipPath != null) {
+      canvas.clipPath(clipPath!);
     }
 
     // Hanging drip stays on the selected tab at rest (progress == 1).
@@ -98,6 +117,7 @@ class WaterDropNavPainter extends CustomPainter {
         Paint()..color = color,
       );
     }
+    canvas.restore();
   }
 
   @override
@@ -106,6 +126,8 @@ class WaterDropNavPainter extends CustomPainter {
         oldDelegate.selectedIndex != selectedIndex ||
         oldDelegate.previousIndex != previousIndex ||
         oldDelegate.color != color ||
-        oldDelegate.itemCount != itemCount;
+        oldDelegate.itemCount != itemCount ||
+        oldDelegate.slots != slots ||
+        oldDelegate.clipPath != clipPath;
   }
 }

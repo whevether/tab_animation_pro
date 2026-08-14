@@ -23,6 +23,9 @@ Initial release of `tab_animation_pro`.
 
 - `TabItemShape`: `none`, `circle`, `stadium`, `hexagon`, `diamond`, `trapezoid`, `parallelogram`, `leaf`, `custom`
 - `TabBarSurface`: `solid`, `gradient`, `glass`, `neumorphic`. `glass` is liquid frost (live blur + vibrancy + specular rim); the Surfaces demo puts wallpaper behind the bar
+- `TabItemShape.none` no longer falls back to a stadium capsule; the selected ellipse is omitted
+- Water-drop drip is clipped to the bar path so it does not spill into a smooth FAB notch
+- Side `container` bars map the protruding tab to the same slot as the icons (left/right)
 
 ### Animations
 

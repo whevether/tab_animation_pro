@@ -126,7 +126,7 @@ class _HomePageState extends State<HomePage> {
 | `onTap` | `ValueChanged<int>?` | `null` | 点击回调。水滴动画播放中会忽略再次点击。 |
 | `controller` | `TabAnimationController?` | `null` | 编程切 Tab。非空时点击不再用 `setState(currentIndex)`，而是 `controller.jumpTo`。 |
 | `shape` | `TabBarShape` | `fixed` | 整栏轮廓。 |
-| `itemShape` | `TabItemShape` | `none` | 选中项裁剪/高亮外形（指示器层）。`container` / 钢琴键 / notch / 水滴会关掉独立指示器。 |
+| `itemShape` | `TabItemShape` | `none` | 选中槽高亮外形。`none` 不画椭圆。`container` / 钢琴键 / notch / 水滴会关掉独立指示器。 |
 | `surface` | `TabBarSurface` | `solid` | 填充材质。 |
 | `animation` | `TabAnimationStyle?` | `null` | 一键预设（指示器+项+反馈+栏体运动）。未设时默认指示器 `slidingPill`、项 `colorTween`。 |
 | `indicatorAnimation` | `TabIndicatorStyle?` | `null` | 覆盖预设的指示器。 |
@@ -157,7 +157,7 @@ class _HomePageState extends State<HomePage> {
 | `showLabels` | `bool` | `true` | 是否画 `TabItem.label`。水滴同样生效。 |
 | `customBarPath` | `TabBarPathBuilder?` | `null` | `shape: custom` 时的路径。 |
 | `safeArea` | `bool` | `true` | 按 `position` 只垫对应边（底栏垫 bottom，顶栏垫 top，侧栏垫 left/right）。 |
-| `fabConfig` | `TabFabConfig` | center + verySmoothEdge | 仅 `materialNotch`：FAB 位置、缺口平滑、点 FAB 弹出。 |
+| `fabConfig` | `TabFabConfig` | center + verySmoothEdge | 停靠 FAB。`container` / `sCurve` / `sDivider` 忽略。水滴等平顶栏会挖圆形缺口。 |
 
 ## TabItem
 
@@ -295,15 +295,15 @@ controller.previous(itemCount: items.length);
 
 ### materialNotch
 
-对齐 [animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar) 的挖空 FAB。用 `fabConfig` 切换参考包里的几种效果：
+对齐 [animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar) 的挖空 FAB。`fabConfig` 在**除 `container` / `sCurve` / `sDivider` 外的所有外形**上都可用（含水滴）；`materialNotch` 仍用参考包那套圆形缺口。
 
 | 效果 | 怎么开 |
 |------|--------|
-| 无 FAB | `TabFabLocation.none`（只有圆角栏，无缺口） |
+| 无 FAB | `TabFabLocation.none` |
 | 居中停靠 | `TabFabLocation.center`（`centerDocked`） |
-| 右侧停靠 | `TabFabLocation.end`（`endDocked`，右上角半径为 0） |
-| 缺口平滑 | `TabNotchSmoothness`：`sharpEdge` / `defaultEdge` / `softEdge` / `smoothEdge` / `verySmoothEdge` |
-| 点 FAB 弹出 | 默认 `animateOnTap: true`：缩放 + 缺口从 0 长出（参考示例按 FAB） |
+| 右侧停靠 | `TabFabLocation.end`（`endDocked`） |
+| 缺口平滑 | `TabNotchSmoothness`：`sharpEdge` / `defaultEdge` / `softEdge` / `smoothEdge` / `verySmoothEdge`（平顶栏 / 水滴 / materialNotch 会挖缺口） |
+| 点 FAB 弹出 | 默认 `animateOnTap: true`：缩放 + 缺口从 0 长出 |
 | 点 Tab | 只播该项 `itemAnimation`，FAB 不跟着颤 |
 
 - FAB 默认直径 56，缺口边距 8；圆心在栏顶边（一半露出）
@@ -352,6 +352,7 @@ itemAnimation: TabItemAnimation.colorTween,
 - 动画过程中忽略点击
 - 栏底色与水滴色（`indicatorColor`）必须不同，否则看不出垂滴
 - 水平栏才画水滴；侧栏仍显示图标文字，不画滴
+- 可用 `fabConfig` 加居中/右侧 FAB；Tab 会给 FAB 让出空隙，水滴落点跟槽位对齐
 
 ```dart
 TabAnimationPro(
@@ -367,6 +368,7 @@ TabAnimationPro(
   showLabels: true,
   backgroundColor: Colors.white,
   indicatorColor: Colors.teal, // 与栏底、页面背景都要有对比
+  fabConfig: const TabFabConfig(location: TabFabLocation.center),
 )
 ```
 
@@ -430,11 +432,11 @@ customBarPath: (size, selectedIndex, itemCount, progress) {
 
 ## 选中项外形
 
-`itemShape` 画在指示器层，给选中槽裁一个几何高亮（胶囊、六边形等）。下列外形**不会**再画这层，以免和自身 Path / FAB / 水滴打架：`container`、`sCurve`、`sDivider`、`materialNotch`、`curvedNotch`、`waterDrop`。
+`itemShape` 画在指示器层，给选中槽裁一个几何高亮（胶囊、六边形等）。**`none` 不画这层高亮**（没有选中椭圆）。下列栏体外形本来就不会画这层，以免和自身 Path / FAB / 水滴打架：`container`、`sCurve`、`sDivider`、`materialNotch`、`curvedNotch`、`waterDrop`。
 
 | 值 | 说明 |
 |----|------|
-| `none` | 不裁 |
+| `none` | 不画选中槽高亮（不要椭圆） |
 | `circle` / `stadium` | 圆 / 胶囊 |
 | `hexagon` / `diamond` / `trapezoid` / `parallelogram` / `leaf` | 多边形 |
 | `custom` | 预留 |

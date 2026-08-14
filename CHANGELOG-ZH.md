@@ -23,6 +23,9 @@
 
 - `TabItemShape`：`none`、`circle`、`stadium`、`hexagon`、`diamond`、`trapezoid`、`parallelogram`、`leaf`、`custom`
 - `TabBarSurface`：`solid`、`gradient`、`glass`、`neumorphic`。`glass` 为液态毛玻璃（实时模糊 + 饱和 + 高光描边），示例 Surfaces 页用彩色壁纸衬在栏后
+- `itemShape: none` 不再回退画胶囊椭圆，选中高亮关闭
+- 水滴顶边裁进栏体 Path，平滑 FAB 缺口旁不再溢出去
+- 侧栏 `container` 凸起槽与图标上下顺序对齐（left / right）
 
 ### 动画
 

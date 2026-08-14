@@ -4,6 +4,7 @@ library;
 export 'src/animations/preset.dart';
 export 'src/controller.dart';
 export 'src/effects/tab_3d.dart';
+export 'src/layout/tab_slot_geometry.dart';
 export 'src/media/tab_badge.dart';
 export 'src/media/tab_graphic.dart';
 export 'src/media/tab_media_inherited.dart';

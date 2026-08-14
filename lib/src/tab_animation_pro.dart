@@ -13,6 +13,7 @@ import 'animations/item/water_drop_icon_reveal.dart';
 import 'animations/preset.dart';
 import 'controller.dart';
 import 'effects/tab_3d.dart';
+import 'layout/tab_slot_geometry.dart';
 import 'media/tab_media_inherited.dart';
 import 'media/tab_media_scope.dart';
 import 'models/enums.dart';
@@ -123,8 +124,9 @@ class TabAnimationPro extends StatefulWidget {
   final TabBarPathBuilder? customBarPath;
   final bool safeArea;
 
-  /// Docked FAB / notch for [TabBarShape.materialNotch]
-  /// ([animated_bottom_navigation_bar] gap, smoothness, and FAB pop).
+  /// Docked FAB for every shape except `container` / `sCurve` / `sDivider`.
+  /// `materialNotch` keeps the circular cutout; water-drop and other flat-top
+  /// bars cut a matching docked notch when [TabFabConfig.showFab] is true.
   final TabFabConfig fabConfig;
 
   @override
@@ -317,16 +319,14 @@ class _TabAnimationProState extends State<TabAnimationPro>
         final isVertical = widget.position == TabBarPosition.left ||
             widget.position == TabBarPosition.right;
         final fab = widget.fabConfig;
-        final showDockedFab = isMaterialNotch && fab.showFab && !isVertical;
+        final supportsFab = widget.shape.supportsDockedFab && !isVertical;
+        final showDockedFab = supportsFab && fab.showFab;
         final fabSize = fab.size;
         final notchMargin = fab.margin;
         final fabAppear =
             (showDockedFab && !reduce) ? _fabAppear.value : 1.0;
-        final topPad = showDockedFab
-            ? fabSize / 2
-            : (isMaterialNotch
-                ? 0.0
-                : (isCurvedNotch ? 8.0 : (isConvexBump ? 22.0 : 0.0)));
+        final bumpPad = isConvexBump ? 22.0 : (isCurvedNotch ? 8.0 : 0.0);
+        final topPad = showDockedFab ? math.max(fabSize / 2, bumpPad) : bumpPad;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -356,22 +356,33 @@ class _TabAnimationProState extends State<TabAnimationPro>
             List<Path>? pianoKeys;
             List<Path>? pianoSeams;
             final itemCount = math.max(widget.items.length, 1);
-            final mainExtentForPath = barSize.width;
-            final itemExtentForPath = mainExtentForPath / itemCount;
-            final bumpFrom = (_previousIndex + 0.5) * itemExtentForPath;
-            final bumpTo = (_index + 0.5) * itemExtentForPath;
+            final slots = TabSlotGeometry.of(
+              width: barSize.width,
+              itemCount: itemCount,
+              location: showDockedFab ? fab.location : TabFabLocation.none,
+              gapWidth: fab.gapWidth,
+            );
+            final bumpFrom = slots.centerX(_previousIndex);
+            final bumpTo = slots.centerX(_index);
             final curvedNotchCenter = lerpDouble(bumpFrom, bumpTo, p)!;
 
             if (isContainer) {
-              // Match tab_container: morph indicatorStart/End between tabs.
+              // Horizontal path is rotated -90° for side bars: x=0 lands at the
+              // bottom. Column tabs still run top→bottom as 0..n-1, so flip the
+              // protrusion onto the matching visual slot.
               final count = itemCount;
               final itemW = barSize.width / count;
-              final fromStart = _previousIndex * itemW;
-              final toStart = _index * itemW;
+              final pathFrom = isVertical
+                  ? (count - 1 - _previousIndex)
+                  : _previousIndex;
+              final pathTo =
+                  isVertical ? (count - 1 - _index) : _index;
+              final fromStart = pathFrom * itemW;
+              final toStart = pathTo * itemW;
               final start = lerpDouble(fromStart, toStart, p)!;
               path = buildContainerTabPath(
                 size: barSize,
-                selectedIndex: _index,
+                selectedIndex: pathTo,
                 itemCount: count,
                 borderRadius: widget.cornerRadius,
                 tabExtent: resolvedTabExtent,
@@ -399,14 +410,9 @@ class _TabAnimationProState extends State<TabAnimationPro>
                 path.addPath(key, Offset.zero);
               }
             } else {
-              final gapW = fab.gapWidth;
-              final fabCenterX = !isMaterialNotch
-                  ? (isMoon ? curvedNotchCenter : barSize.width / 2)
-                  : switch (fab.location) {
-                      TabFabLocation.none => barSize.width / 2,
-                      TabFabLocation.center => barSize.width / 2,
-                      TabFabLocation.end => barSize.width - gapW / 2,
-                    };
+              final fabCenterX = showDockedFab
+                  ? slots.fabCenterX
+                  : (isMoon ? curvedNotchCenter : barSize.width / 2);
               path = buildTabBarPath(
                 shape: widget.shape,
                 size: barSize,
@@ -423,17 +429,29 @@ class _TabAnimationProState extends State<TabAnimationPro>
                     ? curvedNotchCenter
                     : (isMaterialNotch
                         ? fabCenterX
-                        : (isMoon ? curvedNotchCenter : null)),
+                        : (isMoon ? curvedNotchCenter : slots.centerX(_index))),
                 customBuilder: widget.customBarPath,
                 notchSmoothness: fab.smoothness,
                 leftCornerRadius: widget.cornerRadius,
-                rightCornerRadius: fab.location == TabFabLocation.end
-                    ? 0.0
-                    : widget.cornerRadius,
+                rightCornerRadius:
+                    isMaterialNotch && fab.location == TabFabLocation.end
+                        ? 0.0
+                        : widget.cornerRadius,
                 notchAppear: isMaterialNotch ? fabAppear : 1,
               );
+              if (showDockedFab &&
+                  widget.shape.cutsFabNotch &&
+                  !isMaterialNotch) {
+                path = applyDockedFabNotch(
+                  source: path,
+                  centerX: fabCenterX,
+                  radius: fabSize / 2 + notchMargin,
+                  smoothness: fab.smoothness,
+                  appear: fabAppear,
+                );
+              }
             }
-            if (!isVertical && isNotch && topPad > 0) {
+            if (!isVertical && topPad > 0 && !isConvexBump) {
               path = path.shift(Offset(0, topPad));
             }
             if (isVertical) {
@@ -471,18 +489,15 @@ class _TabAnimationProState extends State<TabAnimationPro>
               }
             }
 
-            final mainExtent = isVertical ? maxH : maxW;
-            final itemExtent = mainExtent / itemCount;
-            final from = (_previousIndex + 0.5) * itemExtent;
-            final to = (_index + 0.5) * itemExtent;
-            // materialNotch: FAB at center or end. curvedNotch: disc follows tab.
-            final fabMain = isMaterialNotch
-                ? switch (fab.location) {
-                    TabFabLocation.none => 0.0,
-                    TabFabLocation.center => mainExtent / 2,
-                    TabFabLocation.end => mainExtent - fab.gapWidth / 2,
-                  }
+            final from = slots.centerX(_previousIndex);
+            final to = slots.centerX(_index);
+            // Docked FAB at center/end; curvedNotch disc still follows the tab.
+            final fabMain = showDockedFab
+                ? slots.fabCenterX
                 : (isCurvedNotch ? lerpDouble(from, to, p)! : 0.0);
+            final dripClipPath = !isVertical && topPad > 0
+                ? path.shift(Offset(0, -topPad))
+                : path;
 
             final tabItemAnimation = isWaterDrop
                 ? TabItemAnimation.none
@@ -544,7 +559,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
                     Expanded(child: buildSlot(i)),
                 ],
               );
-            } else if (isMaterialNotch && fab.showFab) {
+            } else if (showDockedFab) {
               final gapW = fab.gapWidth;
               final n = widget.items.length;
               tabs = Row(
@@ -680,6 +695,8 @@ class _TabAnimationProState extends State<TabAnimationPro>
                               progress: p,
                               color: indicator,
                               itemShape: widget.itemShape,
+                              slots: slots,
+                              clipPath: dripClipPath,
                             ),
                           ),
                         tabs,
@@ -687,7 +704,11 @@ class _TabAnimationProState extends State<TabAnimationPro>
                     ),
                   ),
                   if (isWaterDrop && !isVertical)
-                    Positioned.fill(
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: topPad,
+                      height: height,
                       child: IgnorePointer(
                         child: CustomPaint(
                           painter: WaterDropNavPainter(
@@ -696,6 +717,8 @@ class _TabAnimationProState extends State<TabAnimationPro>
                             itemCount: widget.items.length,
                             progress: p,
                             color: indicator,
+                            slots: slots,
+                            clipPath: dripClipPath,
                           ),
                         ),
                       ),

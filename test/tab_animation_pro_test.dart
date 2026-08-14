@@ -19,6 +19,21 @@ void main() {
     }
   });
 
+  test('side-bar container protrusion for index 0 sits at the top', () {
+    const horizontal = Size(400, 88);
+    const count = 4;
+    // After -90° rotation, x=0 is the bottom; index 0 must use the last slot.
+    final path = buildContainerTabPath(
+      size: horizontal,
+      selectedIndex: count - 1,
+      itemCount: count,
+      tabExtent: 48,
+    );
+    final rotated = rotateBarPathForSide(path, horizontal);
+    expect(rotated.contains(const Offset(8, 40)), isTrue);
+    expect(rotated.contains(const Offset(8, 360)), isFalse);
+  });
+
   test('item shape paths cover known enums', () {
     final rect = Rect.fromLTWH(0, 0, 48, 32);
     for (final shape in TabItemShape.values) {
@@ -146,6 +161,79 @@ void main() {
     );
     expect(tester.takeException(), isNull);
     expect(find.text('A'), findsOneWidget);
+  });
+
+  test('tab slots leave a center gap for the FAB', () {
+    final slots = TabSlotGeometry.of(
+      width: 400,
+      itemCount: 4,
+      location: TabFabLocation.center,
+      gapWidth: 72,
+    );
+    expect(slots.slotWidth, 82);
+    expect(slots.centerX(0), 41);
+    expect(slots.centerX(1), 123);
+    expect(slots.fabCenterX, 200);
+    expect(slots.centerX(2), 277);
+    expect(slots.centerX(3), 359);
+  });
+
+  test('container and S-curve do not support a docked FAB', () {
+    expect(TabBarShape.waterDrop.supportsDockedFab, isTrue);
+    expect(TabBarShape.rounded.supportsDockedFab, isTrue);
+    expect(TabBarShape.container.supportsDockedFab, isFalse);
+    expect(TabBarShape.sCurve.supportsDockedFab, isFalse);
+    expect(TabBarShape.sDivider.supportsDockedFab, isFalse);
+  });
+
+  testWidgets('waterDrop with center FAB builds', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: TabAnimationPro(
+            items: [
+              TabItem(label: 'A', icon: TabGraphic.icon(Icons.home)),
+              TabItem(label: 'B', icon: TabGraphic.icon(Icons.search)),
+              TabItem(label: 'C', icon: TabGraphic.icon(Icons.star)),
+              TabItem(label: 'D', icon: TabGraphic.icon(Icons.person)),
+            ],
+            currentIndex: 0,
+            onTap: (_) {},
+            shape: TabBarShape.waterDrop,
+            animation: TabAnimationStyle.waterDrop,
+            fabConfig: const TabFabConfig(location: TabFabLocation.center),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.byIcon(Icons.add), findsOneWidget);
+  });
+
+  testWidgets('waterDrop FAB verySmoothEdge does not throw', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: TabAnimationPro(
+            items: [
+              TabItem(label: 'A', icon: TabGraphic.icon(Icons.home)),
+              TabItem(label: 'B', icon: TabGraphic.icon(Icons.search)),
+              TabItem(label: 'C', icon: TabGraphic.icon(Icons.star)),
+              TabItem(label: 'D', icon: TabGraphic.icon(Icons.person)),
+            ],
+            currentIndex: 2,
+            onTap: (_) {},
+            shape: TabBarShape.waterDrop,
+            animation: TabAnimationStyle.waterDrop,
+            fabConfig: const TabFabConfig(
+              location: TabFabLocation.center,
+              smoothness: TabNotchSmoothness.verySmoothEdge,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   test('TabAnimationController notifies', () {

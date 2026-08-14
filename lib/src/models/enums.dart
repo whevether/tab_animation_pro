@@ -40,7 +40,28 @@ enum TabBarShape {
   custom,
 }
 
-/// Docked FAB slot for [TabBarShape.materialNotch], matching
+extension TabBarShapeFab on TabBarShape {
+  /// Piano-key / container bars do not host a docked FAB.
+  bool get supportsDockedFab =>
+      this != TabBarShape.container &&
+      this != TabBarShape.sCurve &&
+      this != TabBarShape.sDivider;
+
+  /// Cut a circular docked notch under the FAB (flat-top bars + water drop).
+  bool get cutsFabNotch =>
+      this == TabBarShape.materialNotch ||
+      this == TabBarShape.fixed ||
+      this == TabBarShape.rounded ||
+      this == TabBarShape.squircle ||
+      this == TabBarShape.floating ||
+      this == TabBarShape.pill ||
+      this == TabBarShape.segmented ||
+      this == TabBarShape.underline ||
+      this == TabBarShape.waterDrop ||
+      this == TabBarShape.concave;
+}
+
+/// Docked FAB slot for bars that [TabBarShapeFab.supportsDockedFab], matching
 /// [animated_bottom_navigation_bar] `GapLocation`.
 enum TabFabLocation {
   /// No FAB and no notch (rounded bar only).
@@ -81,6 +102,7 @@ extension TabNotchSmoothnessCurve on TabNotchSmoothness {
 
 /// Clip / highlight geometry for a selected tab item.
 enum TabItemShape {
+  /// No selected-slot highlight (no capsule / ellipse).
   none,
   circle,
   stadium,

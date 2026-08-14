@@ -126,7 +126,7 @@ You own selection: update `index` in `onTap` and pass it back as `currentIndex`.
 | `onTap` | `ValueChanged<int>?` | `null` | Tap callback. Water-drop ignores taps while the drop is animating. |
 | `controller` | `TabAnimationController?` | `null` | Programmatic index. When set, taps use `jumpTo` instead of your `currentIndex` setter. |
 | `shape` | `TabBarShape` | `fixed` | Bar outline. |
-| `itemShape` | `TabItemShape` | `none` | Clip/highlight for the selected slot. Disabled for container / piano / notch / waterDrop. |
+| `itemShape` | `TabItemShape` | `none` | Highlight shape for the selected slot. `none` draws no capsule. Disabled for container / piano / notch / waterDrop. |
 | `surface` | `TabBarSurface` | `solid` | Fill treatment. |
 | `animation` | `TabAnimationStyle?` | `null` | Preset (indicator + item + feedback + bar motion). If unset: indicator `slidingPill`, item `colorTween`. |
 | `indicatorAnimation` | `TabIndicatorStyle?` | `null` | Overrides the preset indicator. |
@@ -157,6 +157,7 @@ You own selection: update `index` in `onTap` and pass it back as `currentIndex`.
 | `showLabels` | `bool` | `true` | Draw `TabItem.label`. Also applies to water-drop. |
 | `customBarPath` | `TabBarPathBuilder?` | `null` | Used when `shape: custom`. |
 | `safeArea` | `bool` | `true` | Pads only the edge that matches `position`. |
+| `fabConfig` | `TabFabConfig` | center + verySmoothEdge | Docked FAB. Ignored on `container` / `sCurve` / `sDivider`. Water-drop and other flat-top bars cut a circular notch. |
 
 ## TabItem
 
@@ -283,13 +284,14 @@ Without a `controller`, changing `currentIndex` from outside plays the same anim
 
 Center-docked FAB cutout aligned with [animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar) (`CircularNotchedAndCorneredRectangle`, `verySmoothEdge`).
 
+`fabConfig` works on **every shape except** `container` / `sCurve` / `sDivider` (including water-drop). `materialNotch` keeps the reference circular cutout; other flat-top bars get the same docked notch.
+
 - FAB diameter 56, notch margin 8; center sits on the bar’s top edge
-- Tabs **split around a center gap**
-- Prefer an **even** item count
+- Tabs **split around a center or end gap**
+- Prefer an **even** item count for `center`
 - Hole is the bar fill; the Scaffold behind it should contrast
 - `cornerRadius: 32` matches the reference
-- Independent indicator is off; tapping a **tab** plays `itemAnimation` (e.g. `bounce`). The FAB stays still and no longer elastic-scales on switch
-- The drawn FAB is decorative (`IgnorePointer`)
+- Tapping a **tab** plays `itemAnimation`. The FAB stays still on tab switch; tap the FAB for `fabConfig.onTap` (optional pop animation)
 
 ```dart
 TabAnimationPro(
@@ -319,6 +321,7 @@ Hanging drip + falling bead, aligned with [water_drop_nav_bar](https://pub.dev/p
 - Taps ignored while animating
 - Bar fill and drip (`indicatorColor`) must differ
 - Drip is painted on horizontal bars only
+- `fabConfig` can dock a center/end FAB; tabs split around the gap and the drip tracks the real slot
 
 ```dart
 shape: TabBarShape.waterDrop,
@@ -330,6 +333,7 @@ cornerRadius: 0,
 showLabels: true,
 backgroundColor: Colors.white,
 indicatorColor: Colors.teal,
+fabConfig: const TabFabConfig(location: TabFabLocation.center),
 ```
 
 You can also set `indicatorAnimation: TabIndicatorStyle.waterDrop` on another shape; still use 800ms linear.
@@ -377,7 +381,7 @@ Give side bars a finite width (`SizedBox(width: height)`). Do not put them in an
 
 ## Item shapes
 
-`itemShape` clips a highlight in the indicator layer. These bar shapes skip that layer so they do not fight their own path / FAB / drip: `container`, `sCurve`, `sDivider`, `materialNotch`, `curvedNotch`, `waterDrop`.
+`itemShape` clips a highlight in the indicator layer. **`none` draws no highlight** (no selected ellipse). These bar shapes skip that layer so they do not fight their own path / FAB / drip: `container`, `sCurve`, `sDivider`, `materialNotch`, `curvedNotch`, `waterDrop`.
 
 Values: `none`, `circle`, `stadium`, `hexagon`, `diamond`, `trapezoid`, `parallelogram`, `leaf`, `custom`.
 

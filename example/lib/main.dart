@@ -112,6 +112,77 @@ const _kDemoColors = TabColors(
   pianoSeam: Color(0x590F766E),
 );
 
+TabFabConfig _demoFab(
+  TabFabLocation location, {
+  TabNotchSmoothness smoothness = TabNotchSmoothness.verySmoothEdge,
+}) {
+  return TabFabConfig(
+    location: location,
+    smoothness: smoothness,
+    onTap: () {},
+  );
+}
+
+class _FabLocationChips extends StatelessWidget {
+  const _FabLocationChips({
+    required this.location,
+    required this.onChanged,
+    this.smoothness,
+    this.onSmoothness,
+    this.showSmoothness = false,
+  });
+
+  final TabFabLocation location;
+  final ValueChanged<TabFabLocation> onChanged;
+  final TabNotchSmoothness? smoothness;
+  final ValueChanged<TabNotchSmoothness>? onSmoothness;
+  final bool showSmoothness;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text('FAB'),
+        ),
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final loc in TabFabLocation.values)
+              ChoiceChip(
+                label: Text(loc.name),
+                selected: location == loc,
+                onSelected: (_) => onChanged(loc),
+              ),
+          ],
+        ),
+        if (showSmoothness &&
+            location != TabFabLocation.none &&
+            smoothness != null) ...[
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text('缺口平滑'),
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final s in TabNotchSmoothness.values)
+                ChoiceChip(
+                  label: Text(s.name),
+                  selected: smoothness == s,
+                  onSelected: (_) => onSmoothness?.call(s),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 TabColors _surfaceDemoColors(TabBarSurface surface) {
   switch (surface) {
     case TabBarSurface.solid:
@@ -179,6 +250,8 @@ class RegularShapesPage extends StatefulWidget {
 class _RegularShapesPageState extends State<RegularShapesPage> {
   int index = 0;
   TabBarShape shape = TabBarShape.fixed;
+  TabFabLocation fabLocation = TabFabLocation.none;
+  TabNotchSmoothness notchSmoothness = TabNotchSmoothness.verySmoothEdge;
 
   @override
   Widget build(BuildContext context) {
@@ -188,23 +261,35 @@ class _RegularShapesPageState extends State<RegularShapesPage> {
         children: [
           Padding(
             padding: const EdgeInsets.all(8),
-            child: Wrap(
-              spacing: 8,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final s in [
-                  TabBarShape.fixed,
-                  TabBarShape.rounded,
-                  TabBarShape.squircle,
-                  TabBarShape.floating,
-                  TabBarShape.pill,
-                  TabBarShape.segmented,
-                  TabBarShape.underline,
-                ])
-                  ChoiceChip(
-                    label: Text(s.name),
-                    selected: shape == s,
-                    onSelected: (_) => setState(() => shape = s),
-                  ),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final s in [
+                      TabBarShape.fixed,
+                      TabBarShape.rounded,
+                      TabBarShape.squircle,
+                      TabBarShape.floating,
+                      TabBarShape.pill,
+                      TabBarShape.segmented,
+                      TabBarShape.underline,
+                    ])
+                      ChoiceChip(
+                        label: Text(s.name),
+                        selected: shape == s,
+                        onSelected: (_) => setState(() => shape = s),
+                      ),
+                  ],
+                ),
+                _FabLocationChips(
+                  location: fabLocation,
+                  onChanged: (v) => setState(() => fabLocation = v),
+                  showSmoothness: shape.cutsFabNotch,
+                  smoothness: notchSmoothness,
+                  onSmoothness: (v) => setState(() => notchSmoothness = v),
+                ),
               ],
             ),
           ),
@@ -217,7 +302,9 @@ class _RegularShapesPageState extends State<RegularShapesPage> {
         onTap: (i) => setState(() => index = i),
         shape: shape,
         animation: TabAnimationStyle.slideIndicator,
+        itemShape: TabItemShape.stadium,
         colors: _kDemoColors,
+        fabConfig: _demoFab(fabLocation, smoothness: notchSmoothness),
       ),
     );
   }
@@ -253,7 +340,6 @@ class _IrregularShapesPageState extends State<IrregularShapesPage> {
   Widget build(BuildContext context) {
     final isWater = shape == TabBarShape.waterDrop;
     final isMoon = shape == TabBarShape.moonIn || shape == TabBarShape.moonOut;
-    final isFab = shape == TabBarShape.materialNotch;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(title: const Text('Irregular shapes')),
@@ -273,42 +359,18 @@ class _IrregularShapesPageState extends State<IrregularShapesPage> {
                   ),
               ],
             ),
-            if (isFab) ...[
-              const SizedBox(height: 12),
-              const Text('FAB 位置（GapLocation）'),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final loc in TabFabLocation.values)
-                    ChoiceChip(
-                      label: Text(loc.name),
-                      selected: fabLocation == loc,
-                      onSelected: (_) => setState(() => fabLocation = loc),
-                    ),
-                ],
+            _FabLocationChips(
+              location: fabLocation,
+              onChanged: (v) => setState(() => fabLocation = v),
+              showSmoothness: shape.cutsFabNotch,
+              smoothness: notchSmoothness,
+              onSmoothness: (v) => setState(() => notchSmoothness = v),
+            ),
+            if (fabLocation != TabFabLocation.none)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text('点 FAB 会重放弹出动画；点 Tab 只播该项动画。'),
               ),
-              if (fabLocation != TabFabLocation.none) ...[
-                const SizedBox(height: 8),
-                const Text('缺口平滑（NotchSmoothness）'),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final s in TabNotchSmoothness.values)
-                      ChoiceChip(
-                        label: Text(s.name),
-                        selected: notchSmoothness == s,
-                        onSelected: (_) =>
-                            setState(() => notchSmoothness = s),
-                      ),
-                  ],
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Text('点 FAB 会重放弹出动画；点 Tab 只播该项动画。'),
-                ),
-              ],
-            ],
           ],
         ),
       ),
@@ -345,11 +407,7 @@ class _IrregularShapesPageState extends State<IrregularShapesPage> {
         feedbackAnimation: isWater
             ? TabFeedbackAnimation.none
             : TabFeedbackAnimation.elasticPop,
-        fabConfig: TabFabConfig(
-          location: fabLocation,
-          smoothness: notchSmoothness,
-          onTap: () {},
-        ),
+        fabConfig: _demoFab(fabLocation, smoothness: notchSmoothness),
         colors: _kDemoColors,
       ),
     );
@@ -499,6 +557,7 @@ class ColorsDemoPage extends StatefulWidget {
 class _ColorsDemoPageState extends State<ColorsDemoPage> {
   int index = 0;
   int palette = 0;
+  TabFabLocation fabLocation = TabFabLocation.center;
 
   static const palettes = <(String, TabColors)>[
     (
@@ -555,15 +614,24 @@ class _ColorsDemoPageState extends State<ColorsDemoPage> {
       appBar: AppBar(title: const Text('Colors')),
       body: Padding(
         padding: const EdgeInsets.all(8),
-        child: Wrap(
-          spacing: 8,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (var i = 0; i < palettes.length; i++)
-              ChoiceChip(
-                label: Text(palettes[i].$1),
-                selected: palette == i,
-                onSelected: (_) => setState(() => palette = i),
-              ),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (var i = 0; i < palettes.length; i++)
+                  ChoiceChip(
+                    label: Text(palettes[i].$1),
+                    selected: palette == i,
+                    onSelected: (_) => setState(() => palette = i),
+                  ),
+              ],
+            ),
+            _FabLocationChips(
+              location: fabLocation,
+              onChanged: (v) => setState(() => fabLocation = v),
+            ),
           ],
         ),
       ),
@@ -579,6 +647,7 @@ class _ColorsDemoPageState extends State<ColorsDemoPage> {
         cornerRadius: 0,
         showLabels: true,
         colors: entry.$2,
+        fabConfig: _demoFab(fabLocation),
       ),
     );
   }
@@ -594,6 +663,7 @@ class ItemShapesPage extends StatefulWidget {
 class _ItemShapesPageState extends State<ItemShapesPage> {
   int index = 0;
   TabItemShape itemShape = TabItemShape.stadium;
+  TabFabLocation fabLocation = TabFabLocation.none;
 
   @override
   Widget build(BuildContext context) {
@@ -601,16 +671,25 @@ class _ItemShapesPageState extends State<ItemShapesPage> {
       appBar: AppBar(title: const Text('Item shapes')),
       body: Padding(
         padding: const EdgeInsets.all(8),
-        child: Wrap(
-          spacing: 8,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final s in TabItemShape.values)
-              if (s != TabItemShape.custom)
-                ChoiceChip(
-                  label: Text(s.name),
-                  selected: itemShape == s,
-                  onSelected: (_) => setState(() => itemShape = s),
-                ),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final s in TabItemShape.values)
+                  if (s != TabItemShape.custom)
+                    ChoiceChip(
+                      label: Text(s.name),
+                      selected: itemShape == s,
+                      onSelected: (_) => setState(() => itemShape = s),
+                    ),
+              ],
+            ),
+            _FabLocationChips(
+              location: fabLocation,
+              onChanged: (v) => setState(() => fabLocation = v),
+            ),
           ],
         ),
       ),
@@ -621,6 +700,7 @@ class _ItemShapesPageState extends State<ItemShapesPage> {
         itemShape: itemShape,
         indicatorAnimation: TabIndicatorStyle.slidingPill,
         colors: _kDemoColors,
+        fabConfig: _demoFab(fabLocation),
       ),
     );
   }
@@ -636,6 +716,7 @@ class SurfacesPage extends StatefulWidget {
 class _SurfacesPageState extends State<SurfacesPage> {
   int index = 0;
   TabBarSurface surface = TabBarSurface.solid;
+  TabFabLocation fabLocation = TabFabLocation.none;
 
   @override
   Widget build(BuildContext context) {
@@ -679,6 +760,7 @@ class _SurfacesPageState extends State<SurfacesPage> {
         margin: isGlass
             ? const EdgeInsets.fromLTRB(16, 0, 16, 10)
             : EdgeInsets.zero,
+        fabConfig: _demoFab(fabLocation),
       ),
     );
   }
@@ -686,15 +768,24 @@ class _SurfacesPageState extends State<SurfacesPage> {
   Widget _surfaceChips() {
     return Padding(
       padding: const EdgeInsets.all(8),
-      child: Wrap(
-        spacing: 8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final s in TabBarSurface.values)
-            ChoiceChip(
-              label: Text(s.name),
-              selected: surface == s,
-              onSelected: (_) => setState(() => surface = s),
-            ),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final s in TabBarSurface.values)
+                ChoiceChip(
+                  label: Text(s.name),
+                  selected: surface == s,
+                  onSelected: (_) => setState(() => surface = s),
+                ),
+            ],
+          ),
+          _FabLocationChips(
+            location: fabLocation,
+            onChanged: (v) => setState(() => fabLocation = v),
+          ),
         ],
       ),
     );
@@ -782,6 +873,7 @@ class IndicatorAnimationsPage extends StatefulWidget {
 class _IndicatorAnimationsPageState extends State<IndicatorAnimationsPage> {
   int index = 0;
   TabIndicatorStyle indicator = TabIndicatorStyle.slidingPill;
+  TabFabLocation fabLocation = TabFabLocation.none;
 
   @override
   Widget build(BuildContext context) {
@@ -805,6 +897,10 @@ class _IndicatorAnimationsPageState extends State<IndicatorAnimationsPage> {
                   ),
             ],
           ),
+          _FabLocationChips(
+            location: fabLocation,
+            onChanged: (v) => setState(() => fabLocation = v),
+          ),
         ],
       ),
       bottomNavigationBar: TabAnimationPro(
@@ -817,6 +913,7 @@ class _IndicatorAnimationsPageState extends State<IndicatorAnimationsPage> {
                 ? TabAnimationStyle.starTwinkle
                 : null,
         indicatorAnimation: indicator,
+        itemShape: TabItemShape.stadium,
         itemAnimation: TabItemAnimation.colorTween,
         feedbackAnimation: indicator == TabIndicatorStyle.starTwinkle
             ? TabFeedbackAnimation.starTwinkle
@@ -829,6 +926,7 @@ class _IndicatorAnimationsPageState extends State<IndicatorAnimationsPage> {
         cornerRadius: isWater ? 0 : 16,
         showLabels: true,
         colors: _kDemoColors,
+        fabConfig: _demoFab(fabLocation),
       ),
     );
   }
@@ -844,6 +942,7 @@ class ItemAnimationsPage extends StatefulWidget {
 class _ItemAnimationsPageState extends State<ItemAnimationsPage> {
   int index = 0;
   TabItemAnimation itemAnim = TabItemAnimation.flashy;
+  TabFabLocation fabLocation = TabFabLocation.none;
 
   @override
   Widget build(BuildContext context) {
@@ -851,17 +950,26 @@ class _ItemAnimationsPageState extends State<ItemAnimationsPage> {
       appBar: AppBar(title: const Text('Item animations')),
       body: Padding(
         padding: const EdgeInsets.all(8),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final s in TabItemAnimation.values)
-              if (s != TabItemAnimation.custom)
-                ChoiceChip(
-                  label: Text(s.name),
-                  selected: itemAnim == s,
-                  onSelected: (_) => setState(() => itemAnim = s),
-                ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final s in TabItemAnimation.values)
+                  if (s != TabItemAnimation.custom)
+                    ChoiceChip(
+                      label: Text(s.name),
+                      selected: itemAnim == s,
+                      onSelected: (_) => setState(() => itemAnim = s),
+                    ),
+              ],
+            ),
+            _FabLocationChips(
+              location: fabLocation,
+              onChanged: (v) => setState(() => fabLocation = v),
+            ),
           ],
         ),
       ),
@@ -870,8 +978,10 @@ class _ItemAnimationsPageState extends State<ItemAnimationsPage> {
         currentIndex: index,
         onTap: (i) => setState(() => index = i),
         indicatorAnimation: TabIndicatorStyle.slidingPill,
+        itemShape: TabItemShape.stadium,
         itemAnimation: itemAnim,
         colors: _kDemoColors,
+        fabConfig: _demoFab(fabLocation),
       ),
     );
   }
@@ -888,6 +998,7 @@ class _ThreeDDemoPageState extends State<ThreeDDemoPage> {
   int index = 0;
   bool enable3D = true;
   Tab3DStyle style = Tab3DStyle.cube;
+  TabFabLocation fabLocation = TabFabLocation.none;
 
   @override
   Widget build(BuildContext context) {
@@ -914,6 +1025,13 @@ class _ThreeDDemoPageState extends State<ThreeDDemoPage> {
                   .toList(),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _FabLocationChips(
+              location: fabLocation,
+              onChanged: (v) => setState(() => fabLocation = v),
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: TabAnimationPro(
@@ -925,6 +1043,7 @@ class _ThreeDDemoPageState extends State<ThreeDDemoPage> {
         animation: TabAnimationStyle.none,
         itemAnimation: TabItemAnimation.colorTween,
         colors: _kDemoColors,
+        fabConfig: _demoFab(fabLocation),
       ),
     );
   }
@@ -939,6 +1058,7 @@ class MediaDemoPage extends StatefulWidget {
 
 class _MediaDemoPageState extends State<MediaDemoPage> {
   int index = 0;
+  TabFabLocation fabLocation = TabFabLocation.none;
 
   @override
   Widget build(BuildContext context) {
@@ -996,11 +1116,20 @@ class _MediaDemoPageState extends State<MediaDemoPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Badges & external media')),
-      body: const Padding(
-        padding: EdgeInsets.all(16),
-        child: Text(
-          'Lottie/GIF are passed from the host app via TabGraphic.builder / '
-          'TabGraphic.widget. The package itself does not depend on lottie.',
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Lottie/GIF are passed from the host app via TabGraphic.builder / '
+              'TabGraphic.widget. The package itself does not depend on lottie.',
+            ),
+            _FabLocationChips(
+              location: fabLocation,
+              onChanged: (v) => setState(() => fabLocation = v),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: TabAnimationPro(
@@ -1009,8 +1138,10 @@ class _MediaDemoPageState extends State<MediaDemoPage> {
         onTap: (i) => setState(() => index = i),
         shape: TabBarShape.rounded,
         animation: TabAnimationStyle.slideIndicator,
+        itemShape: TabItemShape.stadium,
         feedbackAnimation: TabFeedbackAnimation.badgePop,
         colors: _kDemoColors,
+        fabConfig: _demoFab(fabLocation),
       ),
     );
   }
@@ -1027,6 +1158,7 @@ class _LayoutExtrasPageState extends State<LayoutExtrasPage> {
   int index = 0;
   bool top = false;
   bool rtl = false;
+  TabFabLocation fabLocation = TabFabLocation.none;
 
   @override
   Widget build(BuildContext context) {
@@ -1038,6 +1170,7 @@ class _LayoutExtrasPageState extends State<LayoutExtrasPage> {
       respectReduceMotion: true,
       animation: TabAnimationStyle.worm,
       colors: _kDemoColors,
+      fabConfig: _demoFab(fabLocation),
     );
 
     return Directionality(
@@ -1063,6 +1196,13 @@ class _LayoutExtrasPageState extends State<LayoutExtrasPage> {
               padding: EdgeInsets.all(16),
               child: Text(
                 'Respects MediaQuery.disableAnimations (Reduce Motion) via TabMediaState.',
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _FabLocationChips(
+                location: fabLocation,
+                onChanged: (v) => setState(() => fabLocation = v),
               ),
             ),
           ],

@@ -353,6 +353,33 @@ Path _circularNotchedAndCorneredPath({
   return path;
 }
 
+/// Cuts a circular docked FAB notch into an existing bar [source] by
+/// intersecting with a notched bounding rect (same shoulders as materialNotch).
+Path applyDockedFabNotch({
+  required Path source,
+  required double centerX,
+  required double radius,
+  TabNotchSmoothness smoothness = TabNotchSmoothness.verySmoothEdge,
+  double appear = 1,
+}) {
+  final bounds = source.getBounds();
+  final t = appear.clamp(0.0, 1.0);
+  if (bounds.isEmpty || radius <= 0 || t <= 0.001) return source;
+  final r = math.max(radius * t, 1.0);
+  final cx = centerX.clamp(bounds.left + r + 8, bounds.right - r - 8);
+  final notched = _circularNotchedAndCorneredPath(
+    host: bounds,
+    guestCenter: Offset(cx, bounds.top),
+    notchRadius: r,
+    leftCornerRadius: 0,
+    rightCornerRadius: 0,
+    s1: smoothness.s1,
+    s2: smoothness.s2,
+  );
+  final combined = Path.combine(PathOperation.intersect, source, notched);
+  return combined.getBounds().isEmpty ? source : combined;
+}
+
 /// Organic notch: quadratic shoulders + circular cradle that follows selection.
 Path _curvedNotch(Size size, double centerX, double radius, double corner) {
   final w = size.width;
