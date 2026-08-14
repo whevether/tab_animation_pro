@@ -445,7 +445,7 @@ customBarPath: (size, selectedIndex, itemCount, progress) {
 |----|------|
 | `solid` | 纯色 `background` |
 | `gradient` | `colors.gradient` 或快捷 `gradient` |
-| `glass` | 模糊 + 半透明 |
+| `glass` | 液态毛玻璃：实时模糊 + Rec. 709 饱和 + 高光描边（需 `extendBody` 让内容衬在栏后） |
 | `neumorphic` | 新拟态高光/阴影 |
 
 ## 动画

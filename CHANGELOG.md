@@ -22,7 +22,7 @@ Initial release of `tab_animation_pro`.
 ### Item / surface
 
 - `TabItemShape`: `none`, `circle`, `stadium`, `hexagon`, `diamond`, `trapezoid`, `parallelogram`, `leaf`, `custom`
-- `TabBarSurface`: `solid`, `gradient`, `glass`, `neumorphic`
+- `TabBarSurface`: `solid`, `gradient`, `glass`, `neumorphic`. `glass` is liquid frost (live blur + vibrancy + specular rim); the Surfaces demo puts wallpaper behind the bar
 
 ### Animations
 

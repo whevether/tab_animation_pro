@@ -96,6 +96,10 @@ enum TabItemShape {
 enum TabBarSurface {
   solid,
   gradient,
+
+  /// Liquid frosted glass: live [BackdropFilter] blur, Rec. 709 vibrancy,
+  /// thin tint, and a specular rim. Put content behind the bar
+  /// (`Scaffold.extendBody`) so the frost has something to sample.
   glass,
   neumorphic,
 }

@@ -144,14 +144,15 @@ TabColors _surfaceDemoColors(TabBarSurface surface) {
       );
     case TabBarSurface.glass:
       return const TabColors(
-        background: Color(0xCCE0F2FE),
-        active: Color(0xFF0F766E),
-        inactive: Color(0xFF1E293B),
-        indicator: Color(0xFF0F766E),
-        labelActive: Color(0xFF0F766E),
-        labelInactive: Color(0xFF334155),
-        fab: Color(0xFF0F766E),
-        fabIcon: Colors.white,
+        background: Color(0x66FFFFFF),
+        active: Colors.white,
+        inactive: Color(0xB3FFFFFF),
+        indicator: Color(0x66FFFFFF),
+        labelActive: Colors.white,
+        labelInactive: Color(0xCCFFFFFF),
+        fab: Color(0xCCFFFFFF),
+        fabIcon: Color(0xFF0F766E),
+        shadow: Color(0x66000000),
       );
     case TabBarSurface.neumorphic:
       return const TabColors(
@@ -639,66 +640,133 @@ class _SurfacesPageState extends State<SurfacesPage> {
   @override
   Widget build(BuildContext context) {
     final colors = _surfaceDemoColors(surface);
-    final Color? scaffoldColor;
-    final Gradient? bodyGradient;
+    final isGlass = surface == TabBarSurface.glass;
+    final Color scaffoldColor;
     switch (surface) {
       case TabBarSurface.solid:
         scaffoldColor = const Color(0xFFF1F5F9);
-        bodyGradient = null;
       case TabBarSurface.gradient:
         scaffoldColor = const Color(0xFFF0FDFA);
-        bodyGradient = null;
       case TabBarSurface.glass:
-        scaffoldColor = null;
-        bodyGradient = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0F766E), Color(0xFF0891B2), Color(0xFF7C3AED)],
-        );
+        scaffoldColor = const Color(0xFF0B1220);
       case TabBarSurface.neumorphic:
         scaffoldColor = const Color(0xFFD5DEE5);
-        bodyGradient = null;
     }
 
     return Scaffold(
+      extendBody: isGlass,
       backgroundColor: scaffoldColor,
       appBar: AppBar(
         title: const Text('Surfaces'),
-        backgroundColor: surface == TabBarSurface.glass
-            ? Colors.transparent
-            : scaffoldColor,
-        foregroundColor: surface == TabBarSurface.glass ? Colors.white : null,
+        backgroundColor: isGlass ? Colors.transparent : scaffoldColor,
+        foregroundColor: isGlass ? Colors.white : null,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
-      body: DecoratedBox(
-        decoration: BoxDecoration(gradient: bodyGradient),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  for (final s in TabBarSurface.values)
-                    ChoiceChip(
-                      label: Text(s.name),
-                      selected: surface == s,
-                      onSelected: (_) => setState(() => surface = s),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: isGlass
+          ? _GlassDemoBackdrop(
+              child: _surfaceChips(),
+            )
+          : Column(children: [_surfaceChips()]),
       bottomNavigationBar: TabAnimationPro(
         items: _demoItems(),
         currentIndex: index,
         onTap: (i) => setState(() => index = i),
-        shape: TabBarShape.floating,
+        shape: isGlass ? TabBarShape.pill : TabBarShape.floating,
         surface: surface,
         colors: colors,
-        elevation: surface == TabBarSurface.glass ? 0 : 10,
+        elevation: isGlass ? 14 : 10,
+        margin: isGlass
+            ? const EdgeInsets.fromLTRB(16, 0, 16, 10)
+            : EdgeInsets.zero,
       ),
+    );
+  }
+
+  Widget _surfaceChips() {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Wrap(
+        spacing: 8,
+        children: [
+          for (final s in TabBarSurface.values)
+            ChoiceChip(
+              label: Text(s.name),
+              selected: surface == s,
+              onSelected: (_) => setState(() => surface = s),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Wallpaper + scrolling color so [TabBarSurface.glass] has a live backdrop.
+class _GlassDemoBackdrop extends StatelessWidget {
+  const _GlassDemoBackdrop({required this.child});
+
+  final Widget child;
+
+  static const _blobs = <(Alignment, Color, double)>[
+    (Alignment(-1.1, -0.9), Color(0xFF0F766E), 280),
+    (Alignment(1.15, -0.2), Color(0xFF7C3AED), 260),
+    (Alignment(-0.2, 0.55), Color(0xFF0891B2), 300),
+    (Alignment(0.9, 1.05), Color(0xFFE11D48), 240),
+    (Alignment(-0.85, 1.1), Color(0xFFF59E0B), 220),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const ColoredBox(color: Color(0xFF0B1220)),
+        for (final blob in _blobs)
+          Align(
+            alignment: blob.$1,
+            child: Container(
+              width: blob.$3,
+              height: blob.$3,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    blob.$2.withValues(alpha: 0.95),
+                    blob.$2.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+          children: [
+            child,
+            const SizedBox(height: 12),
+            const Text(
+              '把彩色卡片滚到栏体下方，玻璃会实时模糊背后的内容。',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            for (final color in const [
+              Color(0xFF14B8A6),
+              Color(0xFF6366F1),
+              Color(0xFFF43F5E),
+              Color(0xFFF59E0B),
+              Color(0xFF06B6D4),
+              Color(0xFFA855F7),
+            ])
+              Container(
+                height: 96,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

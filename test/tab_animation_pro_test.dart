@@ -124,6 +124,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('glass surface builds over a backdrop', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          extendBody: true,
+          body: const ColoredBox(color: Color(0xFF7C3AED)),
+          bottomNavigationBar: TabAnimationPro(
+            items: [
+              TabItem(label: 'A', icon: TabGraphic.icon(Icons.home)),
+              TabItem(label: 'B', icon: TabGraphic.icon(Icons.search)),
+            ],
+            currentIndex: 0,
+            onTap: (_) {},
+            surface: TabBarSurface.glass,
+            shape: TabBarShape.pill,
+            colors: const TabColors(background: Color(0x66FFFFFF)),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('A'), findsOneWidget);
+  });
+
   test('TabAnimationController notifies', () {
     final c = TabAnimationController(initialIndex: 0);
     var calls = 0;

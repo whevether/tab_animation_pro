@@ -387,7 +387,7 @@ Values: `none`, `circle`, `stadium`, `hexagon`, `diamond`, `trapezoid`, `paralle
 |-------|------|
 | `solid` | `background` |
 | `gradient` | `colors.gradient` / `gradient` |
-| `glass` | Blur + translucent |
+| `glass` | Liquid frost: live backdrop blur, Rec. 709 vibrancy, specular rim (`Scaffold.extendBody`) |
 | `neumorphic` | Soft highlight / shadow |
 
 ## Animations

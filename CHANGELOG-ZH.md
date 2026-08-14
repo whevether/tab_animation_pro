@@ -22,7 +22,7 @@
 ### 选中项 / 材质
 
 - `TabItemShape`：`none`、`circle`、`stadium`、`hexagon`、`diamond`、`trapezoid`、`parallelogram`、`leaf`、`custom`
-- `TabBarSurface`：`solid`、`gradient`、`glass`、`neumorphic`
+- `TabBarSurface`：`solid`、`gradient`、`glass`、`neumorphic`。`glass` 为液态毛玻璃（实时模糊 + 饱和 + 高光描边），示例 Surfaces 页用彩色壁纸衬在栏后
 
 ### 动画
 
