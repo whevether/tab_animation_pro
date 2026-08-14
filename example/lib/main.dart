@@ -93,6 +93,81 @@ List<TabItem> _demoItems({TabBadge? badge}) {
   ];
 }
 
+/// Default demo palette: teal-200 bar vs light scaffold so the surface is obvious.
+const _kDemoColors = TabColors(
+  background: Color(0xFF99F6E4),
+  active: Color(0xFF0F766E),
+  inactive: Color(0xFF3F3F46),
+  indicator: Color(0xFF0F766E),
+  fab: Color(0xFF0F766E),
+  fabIcon: Colors.white,
+  pressed: Color(0xFF5EEAD4),
+  labelActive: Color(0xFF0F766E),
+  labelInactive: Color(0xFF3F3F46),
+  divider: Color(0xFF0F766E),
+  shadow: Color(0x660F766E),
+  ripple: Color(0x330F766E),
+  glow: Color(0xFF14B8A6),
+  star: Color(0xFFF59E0B),
+  pianoSeam: Color(0x590F766E),
+);
+
+TabColors _surfaceDemoColors(TabBarSurface surface) {
+  switch (surface) {
+    case TabBarSurface.solid:
+      return const TabColors(
+        background: Color(0xFF0F766E),
+        active: Colors.white,
+        inactive: Color(0xB3FFFFFF),
+        indicator: Color(0xFF5EEAD4),
+        labelActive: Colors.white,
+        labelInactive: Color(0xCCFFFFFF),
+        fab: Color(0xFF115E59),
+        fabIcon: Colors.white,
+        shadow: Color(0x800F766E),
+      );
+    case TabBarSurface.gradient:
+      return const TabColors(
+        background: Color(0xFF0F766E),
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Color(0xFF0F766E), Color(0xFF0891B2), Color(0xFF22D3EE)],
+        ),
+        active: Colors.white,
+        inactive: Color(0xB3FFFFFF),
+        indicator: Colors.white,
+        labelActive: Colors.white,
+        labelInactive: Color(0xCCFFFFFF),
+        fab: Color(0xFF155E75),
+        fabIcon: Colors.white,
+      );
+    case TabBarSurface.glass:
+      return const TabColors(
+        background: Color(0xCCE0F2FE),
+        active: Color(0xFF0F766E),
+        inactive: Color(0xFF1E293B),
+        indicator: Color(0xFF0F766E),
+        labelActive: Color(0xFF0F766E),
+        labelInactive: Color(0xFF334155),
+        fab: Color(0xFF0F766E),
+        fabIcon: Colors.white,
+      );
+    case TabBarSurface.neumorphic:
+      return const TabColors(
+        background: Color(0xFFD5DEE5),
+        active: Color(0xFF0F766E),
+        inactive: Color(0xFF475569),
+        indicator: Color(0xFF0F766E),
+        labelActive: Color(0xFF0F766E),
+        labelInactive: Color(0xFF475569),
+        shadow: Color(0x55000000),
+        fab: Color(0xFF0F766E),
+        fabIcon: Colors.white,
+      );
+  }
+}
+
 class RegularShapesPage extends StatefulWidget {
   const RegularShapesPage({super.key});
 
@@ -141,6 +216,7 @@ class _RegularShapesPageState extends State<RegularShapesPage> {
         onTap: (i) => setState(() => index = i),
         shape: shape,
         animation: TabAnimationStyle.slideIndicator,
+        colors: _kDemoColors,
       ),
     );
   }
@@ -156,6 +232,8 @@ class IrregularShapesPage extends StatefulWidget {
 class _IrregularShapesPageState extends State<IrregularShapesPage> {
   int index = 0;
   TabBarShape shape = TabBarShape.convexReact;
+  TabFabLocation fabLocation = TabFabLocation.center;
+  TabNotchSmoothness notchSmoothness = TabNotchSmoothness.verySmoothEdge;
 
   static const shapes = [
     TabBarShape.convexFixed,
@@ -174,21 +252,62 @@ class _IrregularShapesPageState extends State<IrregularShapesPage> {
   Widget build(BuildContext context) {
     final isWater = shape == TabBarShape.waterDrop;
     final isMoon = shape == TabBarShape.moonIn || shape == TabBarShape.moonOut;
+    final isFab = shape == TabBarShape.materialNotch;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(title: const Text('Irregular shapes')),
       body: Padding(
         padding: const EdgeInsets.all(8),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        child: ListView(
           children: [
-            for (final s in shapes)
-              ChoiceChip(
-                label: Text(s.name),
-                selected: shape == s,
-                onSelected: (_) => setState(() => shape = s),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final s in shapes)
+                  ChoiceChip(
+                    label: Text(s.name),
+                    selected: shape == s,
+                    onSelected: (_) => setState(() => shape = s),
+                  ),
+              ],
             ),
+            if (isFab) ...[
+              const SizedBox(height: 12),
+              const Text('FAB 位置（GapLocation）'),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final loc in TabFabLocation.values)
+                    ChoiceChip(
+                      label: Text(loc.name),
+                      selected: fabLocation == loc,
+                      onSelected: (_) => setState(() => fabLocation = loc),
+                    ),
+                ],
+              ),
+              if (fabLocation != TabFabLocation.none) ...[
+                const SizedBox(height: 8),
+                const Text('缺口平滑（NotchSmoothness）'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final s in TabNotchSmoothness.values)
+                      ChoiceChip(
+                        label: Text(s.name),
+                        selected: notchSmoothness == s,
+                        onSelected: (_) =>
+                            setState(() => notchSmoothness = s),
+                      ),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text('点 FAB 会重放弹出动画；点 Tab 只播该项动画。'),
+                ),
+              ],
+            ],
           ],
         ),
       ),
@@ -197,15 +316,12 @@ class _IrregularShapesPageState extends State<IrregularShapesPage> {
         currentIndex: index,
         onTap: (i) => setState(() => index = i),
         shape: shape,
-        // Only curvedNotch should chase the selection; material stays centered.
         barMotion: shape == TabBarShape.curvedNotch
             ? TabBarMotion.followNotch
             : TabBarMotion.none,
         animation: isWater
             ? TabAnimationStyle.waterDrop
-            : isMoon ||
-                    shape == TabBarShape.materialNotch ||
-                    shape == TabBarShape.curvedNotch
+            : isMoon || shape == TabBarShape.curvedNotch
                 ? TabAnimationStyle.slideIndicator
                 : TabAnimationStyle.bounce,
         indicatorAnimation: isWater
@@ -219,14 +335,21 @@ class _IrregularShapesPageState extends State<IrregularShapesPage> {
             : const Duration(milliseconds: 360),
         animationCurve: isWater ? Curves.linear : Curves.easeOutCubic,
         elevation: isWater ? 0 : 8,
-        cornerRadius: isWater ? 0 : 16,
-        itemAnimation: shape == TabBarShape.materialNotch ||
-                shape == TabBarShape.curvedNotch
+        cornerRadius: isWater
+            ? 0
+            : (shape == TabBarShape.materialNotch ? 32.0 : 16.0),
+        itemAnimation: shape == TabBarShape.curvedNotch
             ? TabItemAnimation.colorTween
             : null,
         feedbackAnimation: isWater
             ? TabFeedbackAnimation.none
             : TabFeedbackAnimation.elasticPop,
+        fabConfig: TabFabConfig(
+          location: fabLocation,
+          smoothness: notchSmoothness,
+          onTap: () {},
+        ),
+        colors: _kDemoColors,
       ),
     );
   }
@@ -263,14 +386,7 @@ class _ContainerSCurvePageState extends State<ContainerSCurvePage> {
       animation: (shape == TabBarShape.sCurve || shape == TabBarShape.sDivider)
           ? TabAnimationStyle.none
           : TabAnimationStyle.slideIndicator,
-      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-      activeColor: Theme.of(context).colorScheme.onPrimaryContainer,
-      inactiveColor: shape == TabBarShape.container
-          ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55)
-          : Theme.of(context)
-              .colorScheme
-              .onPrimaryContainer
-              .withValues(alpha: 0.55),
+      colors: _kDemoColors,
       cornerRadius: 16,
     );
 
@@ -387,45 +503,45 @@ class _ColorsDemoPageState extends State<ColorsDemoPage> {
     (
       'Teal',
       TabColors(
-        background: Color(0xFFF4FBF9),
+        background: Color(0xFF99F6E4),
         active: Color(0xFF0F766E),
-        inactive: Color(0xFF6B7280),
+        inactive: Color(0xFF3F3F46),
         indicator: Color(0xFF0F766E),
         fab: Color(0xFF0F766E),
         fabIcon: Colors.white,
-        pressed: Color(0xFF99F6E4),
+        pressed: Color(0xFF5EEAD4),
         labelActive: Color(0xFF0F766E),
-        labelInactive: Color(0xFF6B7280),
+        labelInactive: Color(0xFF3F3F46),
         star: Color(0xFFF59E0B),
       ),
     ),
     (
       'Indigo',
       TabColors(
-        background: Color(0xFFF8FAFC),
-        active: Color(0xFF4F46E5),
-        inactive: Color(0xFF64748B),
-        indicator: Color(0xFF4F46E5),
+        background: Color(0xFFC7D2FE),
+        active: Color(0xFF3730A3),
+        inactive: Color(0xFF334155),
+        indicator: Color(0xFF3730A3),
         fab: Color(0xFF4F46E5),
         fabIcon: Colors.white,
-        pressed: Color(0xFFC7D2FE),
-        labelActive: Color(0xFF4F46E5),
-        labelInactive: Color(0xFF64748B),
+        pressed: Color(0xFFA5B4FC),
+        labelActive: Color(0xFF3730A3),
+        labelInactive: Color(0xFF334155),
         star: Color(0xFFFBBF24),
       ),
     ),
     (
       'Rose',
       TabColors(
-        background: Color(0xFFFFF7F8),
-        active: Color(0xFFE11D48),
-        inactive: Color(0xFF9F1239),
-        indicator: Color(0xFFE11D48),
+        background: Color(0xFFFECDD3),
+        active: Color(0xFFBE123C),
+        inactive: Color(0xFF4B5563),
+        indicator: Color(0xFFBE123C),
         fab: Color(0xFFE11D48),
         fabIcon: Colors.white,
-        pressed: Color(0xFFFECDD3),
-        labelActive: Color(0xFFE11D48),
-        labelInactive: Color(0xFF9F1239),
+        pressed: Color(0xFFFFA4B6),
+        labelActive: Color(0xFFBE123C),
+        labelInactive: Color(0xFF4B5563),
         star: Color(0xFFF59E0B),
       ),
     ),
@@ -503,6 +619,7 @@ class _ItemShapesPageState extends State<ItemShapesPage> {
         onTap: (i) => setState(() => index = i),
         itemShape: itemShape,
         indicatorAnimation: TabIndicatorStyle.slidingPill,
+        colors: _kDemoColors,
       ),
     );
   }
@@ -521,22 +638,57 @@ class _SurfacesPageState extends State<SurfacesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = _surfaceDemoColors(surface);
+    final Color? scaffoldColor;
+    final Gradient? bodyGradient;
+    switch (surface) {
+      case TabBarSurface.solid:
+        scaffoldColor = const Color(0xFFF1F5F9);
+        bodyGradient = null;
+      case TabBarSurface.gradient:
+        scaffoldColor = const Color(0xFFF0FDFA);
+        bodyGradient = null;
+      case TabBarSurface.glass:
+        scaffoldColor = null;
+        bodyGradient = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0F766E), Color(0xFF0891B2), Color(0xFF7C3AED)],
+        );
+      case TabBarSurface.neumorphic:
+        scaffoldColor = const Color(0xFFD5DEE5);
+        bodyGradient = null;
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Surfaces')),
-      body: Column(
-        children: [
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final s in TabBarSurface.values)
-                ChoiceChip(
-                  label: Text(s.name),
-                  selected: surface == s,
-                  onSelected: (_) => setState(() => surface = s),
-                ),
-            ],
-          ),
-        ],
+      backgroundColor: scaffoldColor,
+      appBar: AppBar(
+        title: const Text('Surfaces'),
+        backgroundColor: surface == TabBarSurface.glass
+            ? Colors.transparent
+            : scaffoldColor,
+        foregroundColor: surface == TabBarSurface.glass ? Colors.white : null,
+      ),
+      body: DecoratedBox(
+        decoration: BoxDecoration(gradient: bodyGradient),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  for (final s in TabBarSurface.values)
+                    ChoiceChip(
+                      label: Text(s.name),
+                      selected: surface == s,
+                      onSelected: (_) => setState(() => surface = s),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: TabAnimationPro(
         items: _demoItems(),
@@ -544,9 +696,8 @@ class _SurfacesPageState extends State<SurfacesPage> {
         onTap: (i) => setState(() => index = i),
         shape: TabBarShape.floating,
         surface: surface,
-        backgroundColor: surface == TabBarSurface.glass
-            ? Colors.white.withValues(alpha: 0.4)
-            : null,
+        colors: colors,
+        elevation: surface == TabBarSurface.glass ? 0 : 10,
       ),
     );
   }
@@ -609,6 +760,7 @@ class _IndicatorAnimationsPageState extends State<IndicatorAnimationsPage> {
         elevation: isWater ? 0 : 8,
         cornerRadius: isWater ? 0 : 16,
         showLabels: true,
+        colors: _kDemoColors,
       ),
     );
   }
@@ -651,6 +803,7 @@ class _ItemAnimationsPageState extends State<ItemAnimationsPage> {
         onTap: (i) => setState(() => index = i),
         indicatorAnimation: TabIndicatorStyle.slidingPill,
         itemAnimation: itemAnim,
+        colors: _kDemoColors,
       ),
     );
   }
@@ -703,6 +856,7 @@ class _ThreeDDemoPageState extends State<ThreeDDemoPage> {
         threeDStyle: style,
         animation: TabAnimationStyle.none,
         itemAnimation: TabItemAnimation.colorTween,
+        colors: _kDemoColors,
       ),
     );
   }
@@ -786,8 +940,9 @@ class _MediaDemoPageState extends State<MediaDemoPage> {
         currentIndex: index,
         onTap: (i) => setState(() => index = i),
         shape: TabBarShape.rounded,
-        animation: TabAnimationStyle.chipExpand,
+        animation: TabAnimationStyle.slideIndicator,
         feedbackAnimation: TabFeedbackAnimation.badgePop,
+        colors: _kDemoColors,
       ),
     );
   }
@@ -814,6 +969,7 @@ class _LayoutExtrasPageState extends State<LayoutExtrasPage> {
       position: top ? TabBarPosition.top : TabBarPosition.bottom,
       respectReduceMotion: true,
       animation: TabAnimationStyle.worm,
+      colors: _kDemoColors,
     );
 
     return Directionality(

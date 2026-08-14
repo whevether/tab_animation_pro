@@ -12,13 +12,21 @@ flutter pub get
 flutter run
 ```
 
-## 操作
+## 演示页
 
-| 操作 | 效果 |
+| 页 | 内容 |
 |------|------|
-| 首页列表 | 进入各形状 / 动画 / 3D / 媒体演示 |
-| 3D switch | 开关 `enable3D`，下拉选择 cube / threeD / flip / coverflow / carousel / cards / rotate |
+| Regular shapes | 规则栏体外形 |
+| Irregular shapes | 凸起 / 凹槽 / `materialNotch`（居中 FAB 挖空） / `curvedNotch` / 水滴 / 月亮等 |
+| Container / S-curve | `container` 连体 Tab；`sCurve` / `sDivider` 钢琴键（按下后弹回齐平） |
+| Colors | 水滴栏换色（Teal / Indigo / Rose），含文字与徽标 |
+| Item shapes | 选中项裁剪外形 |
+| Surfaces | solid / gradient / glass / neumorphic |
+| Indicator animations | 指示器层，含水滴（顶部水滴对准当前 Tab） |
+| Item animations | 项动画；`rotate` 为图标+文字转 180° 再归位 |
+| 3D switch | 开关 `enable3D`，下拉 cube / threeD / flip / coverflow / carousel / cards / rotate |
 | Badges & external media | 宿主传入 Lottie/GIF（example 依赖 `lottie`，包本身不依赖） |
+| Top / RTL / Reduce motion | 顶栏、镜像布局、减弱动效 |
 
 ## Android 签名
 

@@ -31,6 +31,24 @@ void main() {
     }
   });
 
+  test('materialNotch paths exist for every NotchSmoothness', () {
+    const size = Size(360, 64);
+    for (final smoothness in TabNotchSmoothness.values) {
+      final path = buildTabBarPath(
+        shape: TabBarShape.materialNotch,
+        size: size,
+        selectedIndex: 0,
+        itemCount: 4,
+        progress: 1,
+        notchRadius: 36,
+        cornerRadius: 32,
+        notchSmoothness: smoothness,
+        bumpCenterX: 180,
+      );
+      expect(path.getBounds().width, greaterThan(0), reason: '$smoothness');
+    }
+  });
+
   test('animation presets resolve', () {
     for (final style in TabAnimationStyle.values) {
       final preset = TabAnimationPreset.resolve(style);

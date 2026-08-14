@@ -105,14 +105,7 @@ class TabItemMotion extends StatelessWidget {
         );
     }
 
-    final revealLabel = label != null &&
-        showLabel &&
-        (animation == TabItemAnimation.labelReveal ||
-            animation == TabItemAnimation.flashy ||
-            animation == TabItemAnimation.shift ||
-            animation == TabItemAnimation.slidingClipped);
-
-    if (!revealLabel && label == null) {
+    if (label == null) {
       return _wrapRotate(content, t);
     }
 
@@ -120,25 +113,17 @@ class TabItemMotion extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         content,
-        if (label != null && showLabel)
-          AnimatedOpacity(
-            opacity: selected ||
-                    animation == TabItemAnimation.none ||
-                    animation == TabItemAnimation.colorTween
-                ? 1
-                : (revealLabel ? t : 0.85),
-            duration: const Duration(milliseconds: 180),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                label!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: labelColor,
-                ),
+        if (showLabel)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              label!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: labelColor,
               ),
             ),
           ),

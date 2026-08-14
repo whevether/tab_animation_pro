@@ -111,24 +111,24 @@ class _SurfacePainter extends CustomPainter {
             .createShader(Offset.zero & size);
         canvas.drawPath(path, paint);
       case TabBarSurface.glass:
-        paint.color = color.withValues(alpha: 0.55);
+        paint.color = color.a < 1 ? color : color.withValues(alpha: 0.72);
         canvas.drawPath(path, paint);
         final border = Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = Colors.white.withValues(alpha: 0.35);
+          ..strokeWidth = 1.5
+          ..color = Colors.white.withValues(alpha: 0.55);
         canvas.drawPath(path, border);
       case TabBarSurface.neumorphic:
         paint.color = color;
         canvas.drawPath(path, paint);
         final light = Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = Colors.white.withValues(alpha: 0.55);
+          ..strokeWidth = 3
+          ..color = Colors.white.withValues(alpha: 0.9);
         final dark = Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = Colors.black.withValues(alpha: 0.08);
+          ..strokeWidth = 3
+          ..color = Colors.black.withValues(alpha: 0.22);
         canvas.save();
         canvas.translate(-1, -1);
         canvas.drawPath(path, light);
@@ -145,6 +145,8 @@ class _SurfacePainter extends CustomPainter {
     return oldDelegate.path != path ||
         oldDelegate.surface != surface ||
         oldDelegate.color != color ||
+        oldDelegate.gradient != gradient ||
+        oldDelegate.shadowColor != shadowColor ||
         oldDelegate.elevation != elevation;
   }
 }

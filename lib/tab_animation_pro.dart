@@ -11,6 +11,7 @@ export 'src/media/tab_media_scope.dart';
 export 'src/models/enums.dart';
 export 'src/models/spring_config.dart';
 export 'src/models/tab_colors.dart';
+export 'src/models/tab_fab_config.dart';
 export 'src/models/tab_item.dart';
 export 'src/shapes/bar_shapes.dart';
 export 'src/shapes/s_divider_overlay.dart';

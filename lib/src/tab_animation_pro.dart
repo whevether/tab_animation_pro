@@ -18,6 +18,7 @@ import 'media/tab_media_scope.dart';
 import 'models/enums.dart';
 import 'models/spring_config.dart';
 import 'models/tab_colors.dart';
+import 'models/tab_fab_config.dart';
 import 'models/tab_item.dart';
 import 'shapes/bar_shapes.dart';
 import 'shapes/piano_keys_painter.dart';
@@ -63,6 +64,7 @@ class TabAnimationPro extends StatefulWidget {
     this.showLabels = true,
     this.customBarPath,
     this.safeArea = true,
+    this.fabConfig = const TabFabConfig(),
   });
 
   final List<TabItem> items;
@@ -121,6 +123,10 @@ class TabAnimationPro extends StatefulWidget {
   final TabBarPathBuilder? customBarPath;
   final bool safeArea;
 
+  /// Docked FAB / notch for [TabBarShape.materialNotch]
+  /// ([animated_bottom_navigation_bar] gap, smoothness, and FAB pop).
+  final TabFabConfig fabConfig;
+
   @override
   State<TabAnimationPro> createState() => _TabAnimationProState();
 }
@@ -131,7 +137,9 @@ class _TabAnimationProState extends State<TabAnimationPro>
   late int _previousIndex;
   late AnimationController _controller;
   late AnimationController _sparkle;
+  late AnimationController _fabPop;
   late Animation<double> _progress;
+  late Animation<double> _fabAppear;
   bool _minimized = false;
 
   @override
@@ -147,7 +155,16 @@ class _TabAnimationProState extends State<TabAnimationPro>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     );
+    _fabPop = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+      value: 1,
+    );
     _progress = CurvedAnimation(parent: _controller, curve: widget.animationCurve);
+    _fabAppear = CurvedAnimation(
+      parent: _fabPop,
+      curve: const Interval(0.5, 1, curve: Curves.fastOutSlowIn),
+    );
     _controller.value = 1;
     widget.controller?.addListener(_onController);
   }
@@ -172,6 +189,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
     widget.controller?.removeListener(_onController);
     _controller.dispose();
     _sparkle.dispose();
+    _fabPop.dispose();
     super.dispose();
   }
 
@@ -223,6 +241,15 @@ class _TabAnimationProState extends State<TabAnimationPro>
     }
   }
 
+  void _onFabTap() {
+    final fab = widget.fabConfig;
+    if (fab.animateOnTap && !_reduceMotion) {
+      _fabPop.forward(from: 0);
+    }
+    HapticFeedback.selectionClick();
+    fab.onTap?.call();
+  }
+
   bool get _reduceMotion {
     if (!widget.respectReduceMotion) return false;
     return MediaQuery.disableAnimationsOf(context);
@@ -271,7 +298,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
         widget.shape == TabBarShape.waterDrop;
 
     Widget bar = AnimatedBuilder(
-      animation: Listenable.merge([_progress, _sparkle]),
+      animation: Listenable.merge([_progress, _sparkle, _fabPop]),
       builder: (context, _) {
         final p = isWaterDrop ? _controller.value : _progress.value;
         final sparkleT = _sparkle.value;
@@ -289,12 +316,17 @@ class _TabAnimationProState extends State<TabAnimationPro>
         final isSCurve = widget.shape == TabBarShape.sCurve;
         final isVertical = widget.position == TabBarPosition.left ||
             widget.position == TabBarPosition.right;
-        // Room for the floating disc above the bar (kept tight to the disc size).
-        const materialFabSize = 34.0;
-        final fabSize = materialFabSize;
-        final topPad = isMaterialNotch
-            ? 20.0
-            : (isCurvedNotch ? 8.0 : (isConvexBump ? 22.0 : 0.0));
+        final fab = widget.fabConfig;
+        final showDockedFab = isMaterialNotch && fab.showFab && !isVertical;
+        final fabSize = fab.size;
+        final notchMargin = fab.margin;
+        final fabAppear =
+            (showDockedFab && !reduce) ? _fabAppear.value : 1.0;
+        final topPad = showDockedFab
+            ? fabSize / 2
+            : (isMaterialNotch
+                ? 0.0
+                : (isCurvedNotch ? 8.0 : (isConvexBump ? 22.0 : 0.0)));
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -367,6 +399,14 @@ class _TabAnimationProState extends State<TabAnimationPro>
                 path.addPath(key, Offset.zero);
               }
             } else {
+              final gapW = fab.gapWidth;
+              final fabCenterX = !isMaterialNotch
+                  ? (isMoon ? curvedNotchCenter : barSize.width / 2)
+                  : switch (fab.location) {
+                      TabFabLocation.none => barSize.width / 2,
+                      TabFabLocation.center => barSize.width / 2,
+                      TabFabLocation.end => barSize.width - gapW / 2,
+                    };
               path = buildTabBarPath(
                 shape: widget.shape,
                 size: barSize,
@@ -374,15 +414,23 @@ class _TabAnimationProState extends State<TabAnimationPro>
                 itemCount: widget.items.length,
                 progress: barMotion == TabBarMotion.none ? 1 : p,
                 cornerRadius: widget.cornerRadius,
-                notchRadius: isCurvedNotch ? 20.0 : fabSize * 0.62,
+                notchRadius: isMaterialNotch
+                    ? (showDockedFab ? fabSize / 2 + notchMargin : 0.0)
+                    : (isCurvedNotch ? 20.0 : fabSize * 0.62),
                 tabExtent: resolvedTabExtent,
                 tabCornerRadius: resolvedTabCorner,
                 bumpCenterX: isCurvedNotch
                     ? curvedNotchCenter
                     : (isMaterialNotch
-                        ? barSize.width / 2
+                        ? fabCenterX
                         : (isMoon ? curvedNotchCenter : null)),
                 customBuilder: widget.customBarPath,
+                notchSmoothness: fab.smoothness,
+                leftCornerRadius: widget.cornerRadius,
+                rightCornerRadius: fab.location == TabFabLocation.end
+                    ? 0.0
+                    : widget.cornerRadius,
+                notchAppear: isMaterialNotch ? fabAppear : 1,
               );
             }
             if (!isVertical && isNotch && topPad > 0) {
@@ -427,17 +475,18 @@ class _TabAnimationProState extends State<TabAnimationPro>
             final itemExtent = mainExtent / itemCount;
             final from = (_previousIndex + 0.5) * itemExtent;
             final to = (_index + 0.5) * itemExtent;
-            // materialNotch: FAB locked to center. curvedNotch: FAB follows tab.
+            // materialNotch: FAB at center or end. curvedNotch: disc follows tab.
             final fabMain = isMaterialNotch
-                ? mainExtent / 2
+                ? switch (fab.location) {
+                    TabFabLocation.none => 0.0,
+                    TabFabLocation.center => mainExtent / 2,
+                    TabFabLocation.end => mainExtent - fab.gapWidth / 2,
+                  }
                 : (isCurvedNotch ? lerpDouble(from, to, p)! : 0.0);
-            final fabScale = isMaterialNotch
-                ? (0.88 + 0.12 * Curves.elasticOut.transform(p.clamp(0.0, 1.0)))
-                : 1.0;
 
             final tabItemAnimation = isWaterDrop
                 ? TabItemAnimation.none
-                : (isNotch
+                : (isCurvedNotch
                     ? TabItemAnimation.colorTween
                     : effectiveItem);
             final tabFeedback = isWaterDrop
@@ -495,6 +544,20 @@ class _TabAnimationProState extends State<TabAnimationPro>
                     Expanded(child: buildSlot(i)),
                 ],
               );
+            } else if (isMaterialNotch && fab.showFab) {
+              final gapW = fab.gapWidth;
+              final n = widget.items.length;
+              tabs = Row(
+                children: [
+                  for (var i = 0; i < n; i++) ...[
+                    if (fab.location == TabFabLocation.center && i == n ~/ 2)
+                      SizedBox(width: gapW),
+                    Expanded(child: buildSlot(i)),
+                    if (fab.location == TabFabLocation.end && i == n - 1)
+                      SizedBox(width: gapW),
+                  ],
+                ],
+              );
             } else {
               tabs = Row(
                 children: [
@@ -538,31 +601,27 @@ class _TabAnimationProState extends State<TabAnimationPro>
                             child: const SizedBox.expand(),
                           ),
                   ),
-                  if (isMaterialNotch && !isVertical)
+                  if (showDockedFab)
                     Positioned(
                       left: fabMain - fabSize / 2,
-                      top: topPad - fabSize * 0.55,
+                      top: topPad - fabSize / 2,
                       width: fabSize,
                       height: fabSize,
-                      child: IgnorePointer(
-                        child: Transform.scale(
-                          scale: fabScale,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: c.fab,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: c.shadow.withValues(alpha: 0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.add,
-                              color: c.fabIcon,
-                              size: 20,
+                      child: Transform.scale(
+                        scale: fabAppear,
+                        child: Material(
+                          color: c.fab,
+                          shape: const CircleBorder(),
+                          elevation: 4,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: _onFabTap,
+                            child: Center(
+                              child: Icon(
+                                fab.icon,
+                                color: c.fabIcon,
+                                size: fabSize * 0.5,
+                              ),
                             ),
                           ),
                         ),

@@ -27,6 +27,11 @@ Path buildTabBarPath({
   /// Optional X center for notch / convex-style bumps (defaults to selected slot).
   double? bumpCenterX,
   TabBarPathBuilder? customBuilder,
+  TabNotchSmoothness notchSmoothness = TabNotchSmoothness.verySmoothEdge,
+  double? leftCornerRadius,
+  double? rightCornerRadius,
+  /// 0–1 scale for notch + corners (FAB appear animation).
+  double notchAppear = 1,
 }) {
   if (shape == TabBarShape.custom && customBuilder != null) {
     return customBuilder(size, selectedIndex, itemCount, progress);
@@ -85,8 +90,16 @@ Path buildTabBarPath({
       return _concavePath(size, w / 2, convexHeight, cornerRadius);
 
     case TabBarShape.materialNotch:
-      // Fixed center circular cutout (Material BottomAppBar style).
-      return _materialNotch(size, bumpCenterX ?? w / 2, notchRadius, cornerRadius);
+      return _materialNotch(
+        size,
+        bumpCenterX ?? w / 2,
+        notchRadius,
+        leftCorner: leftCornerRadius ?? cornerRadius,
+        rightCorner: rightCornerRadius ?? cornerRadius,
+        s1: notchSmoothness.s1,
+        s2: notchSmoothness.s2,
+        appear: notchAppear,
+      );
 
     case TabBarShape.curvedNotch:
       // Softer, narrower notch that tracks the selected tab.
@@ -229,26 +242,114 @@ Path _concavePath(Size size, double centerX, double depth, double corner) {
   return path;
 }
 
-Path _materialNotch(Size size, double centerX, double radius, double corner) {
+Path _materialNotch(
+  Size size,
+  double centerX,
+  double radius, {
+  required double leftCorner,
+  required double rightCorner,
+  double s1 = 40,
+  double s2 = 25,
+  double appear = 1,
+}) {
   final w = size.width;
   final h = size.height;
-  // Compact circular cradle — sized for a ~32–36 FAB, not a half-bar scoop.
-  final host = math.min(radius, math.min(w * 0.12, h * 0.38)).clamp(16.0, 24.0);
-  final cx = centerX.clamp(host + corner + 4, w - host - corner - 4);
-  final path = Path();
-  path.moveTo(0, math.min(corner, h));
-  path.quadraticBezierTo(0, 0, corner, 0);
-  path.lineTo(cx - host, 0);
-  path.arcToPoint(
-    Offset(cx + host, 0),
-    radius: Radius.circular(host),
-    clockwise: true,
+  final t = appear.clamp(0.0, 1.0);
+  final leftR = math.min(leftCorner, h / 2) * t;
+  final rightR = math.min(rightCorner, h / 2) * t;
+  if (radius <= 0 || t <= 0.001) {
+    return Path()
+      ..addRRect(
+        RRect.fromRectAndCorners(
+          Offset.zero & size,
+          topLeft: Radius.circular(leftR),
+          topRight: Radius.circular(rightR),
+        ),
+      );
+  }
+  final r = math.max(radius * t, 1.0);
+  final cx = centerX.clamp(r + 8, w - r - 8);
+  return _circularNotchedAndCorneredPath(
+    host: Offset.zero & size,
+    guestCenter: Offset(cx, 0),
+    notchRadius: r,
+    leftCornerRadius: leftR,
+    rightCornerRadius: rightR,
+    s1: s1,
+    s2: s2,
   );
-  path.lineTo(w - corner, 0);
-  path.quadraticBezierTo(w, 0, w, math.min(corner, h));
-  path.lineTo(w, h);
-  path.lineTo(0, h);
-  path.close();
+}
+
+/// Port of `CircularNotchedAndCorneredRectangle.getOuterPath`
+/// (animated_bottom_navigation_bar / Flutter `CircularNotchedRectangle`).
+Path _circularNotchedAndCorneredPath({
+  required Rect host,
+  required Offset guestCenter,
+  required double notchRadius,
+  required double leftCornerRadius,
+  required double rightCornerRadius,
+  required double s1,
+  required double s2,
+}) {
+  final r = notchRadius;
+  final a = -r - s2;
+  final b = host.top - guestCenter.dy;
+  final denom = a * a + b * b;
+  final under = math.max(b * b * r * r * (denom - r * r), 0.0);
+  final n2 = math.sqrt(under);
+  final p2xA = ((a * r * r) - n2) / denom;
+  final p2xB = ((a * r * r) + n2) / denom;
+  final p2yA = math.sqrt(math.max(r * r - p2xA * p2xA, 0.0));
+  final p2yB = math.sqrt(math.max(r * r - p2xB * p2xB, 0.0));
+  final cmp = b < 0 ? -1.0 : 1.0;
+
+  final p = List<Offset>.filled(6, Offset.zero);
+  p[0] = Offset(a - s1, b);
+  p[1] = Offset(a, b);
+  p[2] = cmp * p2yA > cmp * p2yB ? Offset(p2xA, p2yA) : Offset(p2xB, p2yB);
+  p[3] = Offset(-p[2].dx, p[2].dy);
+  p[4] = Offset(-p[1].dx, p[1].dy);
+  p[5] = Offset(-p[0].dx, p[0].dy);
+  for (var i = 0; i < p.length; i++) {
+    p[i] += guestCenter;
+  }
+
+  final leftR = leftCornerRadius.clamp(0.0, host.height / 2);
+  final rightR = rightCornerRadius.clamp(0.0, host.height / 2);
+  final path = Path()..moveTo(host.left, host.bottom);
+  if (leftR > 0) {
+    path
+      ..lineTo(host.left, host.top + leftR)
+      ..arcToPoint(
+        Offset(host.left + leftR, host.top),
+        radius: Radius.circular(leftR),
+      );
+  } else {
+    path.lineTo(host.left, host.top);
+  }
+  path
+    ..lineTo(p[0].dx, p[0].dy)
+    ..quadraticBezierTo(p[1].dx, p[1].dy, p[2].dx, p[2].dy)
+    ..arcToPoint(
+      p[3],
+      radius: Radius.circular(r),
+      clockwise: false,
+    )
+    ..quadraticBezierTo(p[4].dx, p[4].dy, p[5].dx, p[5].dy);
+  if (rightR > 0) {
+    path
+      ..lineTo(host.right - rightR, host.top)
+      ..arcToPoint(
+        Offset(host.right, host.top + rightR),
+        radius: Radius.circular(rightR),
+      );
+  } else {
+    path.lineTo(host.right, host.top);
+  }
+  path
+    ..lineTo(host.right, host.bottom)
+    ..lineTo(host.left, host.bottom)
+    ..close();
   return path;
 }
 

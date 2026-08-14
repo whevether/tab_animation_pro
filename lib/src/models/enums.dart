@@ -19,7 +19,8 @@ enum TabBarShape {
   convexFixed,
   convexReact,
   concave,
-  /// Fixed center circular cradle (Material BottomAppBar style).
+  /// Fixed center circular cutout + docked FAB
+  /// ([animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar) style).
   materialNotch,
   /// Softer notch + floating disc that follow the selected tab.
   curvedNotch,
@@ -37,6 +38,45 @@ enum TabBarShape {
   /// Piano keys with S-curve seams drawn as divider strokes.
   sDivider,
   custom,
+}
+
+/// Docked FAB slot for [TabBarShape.materialNotch], matching
+/// [animated_bottom_navigation_bar] `GapLocation`.
+enum TabFabLocation {
+  /// No FAB and no notch (rounded bar only).
+  none,
+  /// Center-docked FAB (`FloatingActionButtonLocation.centerDocked`).
+  center,
+  /// End-docked FAB (`FloatingActionButtonLocation.endDocked`).
+  end,
+}
+
+/// Notch shoulder curve for [TabBarShape.materialNotch], matching
+/// [animated_bottom_navigation_bar] `NotchSmoothness`.
+enum TabNotchSmoothness {
+  sharpEdge,
+  defaultEdge,
+  softEdge,
+  smoothEdge,
+  verySmoothEdge,
+}
+
+extension TabNotchSmoothnessCurve on TabNotchSmoothness {
+  double get s1 => switch (this) {
+        TabNotchSmoothness.sharpEdge => 0.0,
+        TabNotchSmoothness.defaultEdge => 15.0,
+        TabNotchSmoothness.softEdge => 20.0,
+        TabNotchSmoothness.smoothEdge => 30.0,
+        TabNotchSmoothness.verySmoothEdge => 40.0,
+      };
+
+  double get s2 => switch (this) {
+        TabNotchSmoothness.sharpEdge => 0.1,
+        TabNotchSmoothness.defaultEdge => 1.0,
+        TabNotchSmoothness.softEdge => 5.0,
+        TabNotchSmoothness.smoothEdge => 15.0,
+        TabNotchSmoothness.verySmoothEdge => 25.0,
+      };
 }
 
 /// Clip / highlight geometry for a selected tab item.
