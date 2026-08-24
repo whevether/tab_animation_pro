@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../models/enums.dart';
 
@@ -121,22 +121,6 @@ Path buildTabBarPath({
             Radius.circular(cornerRadius * 0.35),
           ),
         );
-
-    case TabBarShape.moonIn:
-      return _moonPath(
-        size,
-        selectedCenter,
-        cornerRadius,
-        inward: true,
-      );
-
-    case TabBarShape.moonOut:
-      return _moonPath(
-        size,
-        selectedCenter,
-        cornerRadius,
-        inward: false,
-      );
 
     case TabBarShape.container:
       return buildContainerTabPath(
@@ -444,73 +428,6 @@ Path _wavePath(
     final y = amplitude + math.sin(phase) * amplitude * 0.6;
     path.lineTo(x, y);
   }
-  path.lineTo(w, h);
-  path.lineTo(0, h);
-  path.close();
-  return path;
-}
-
-/// Crescent moon on the selected slot.
-///
-/// [inward] true = 往里 cut into the bar; false = 往外 bulge outward.
-Path _moonPath(
-  Size size,
-  double centerX,
-  double corner, {
-  required bool inward,
-}) {
-  final w = size.width;
-  final h = size.height;
-  final r = math.min(corner, h / 2);
-  final moonR = math.min(20.0, math.min(w * 0.1, h * 0.42));
-  final cx = centerX.clamp(moonR * 1.6 + r, w - moonR * 1.6 - r);
-
-  if (inward) {
-    // 往里: crescent bite along the top edge.
-    final path = Path();
-    path.moveTo(0, r);
-    path.quadraticBezierTo(0, 0, r, 0);
-    path.lineTo(cx - moonR * 1.25, 0);
-    // Outer rim dips into the bar.
-    path.arcToPoint(
-      Offset(cx + moonR * 0.35, moonR * 0.95),
-      radius: Radius.circular(moonR * 1.2),
-      clockwise: true,
-    );
-    // Inner rim swings back up → classic 🌙 cutout.
-    path.arcToPoint(
-      Offset(cx + moonR * 1.25, 0),
-      radius: Radius.circular(moonR * 0.85),
-      clockwise: false,
-    );
-    path.lineTo(w - r, 0);
-    path.quadraticBezierTo(w, 0, w, r);
-    path.lineTo(w, h);
-    path.lineTo(0, h);
-    path.close();
-    return path;
-  }
-
-  // 往外: crescent crest rising above the bar top.
-  final rise = moonR * 1.2;
-  final path = Path();
-  path.moveTo(0, rise + r);
-  path.quadraticBezierTo(0, rise, r, rise);
-  path.lineTo(cx - moonR * 1.3, rise);
-  // Outer moon edge up.
-  path.arcToPoint(
-    Offset(cx + moonR * 0.2, rise - moonR * 1.05),
-    radius: Radius.circular(moonR * 1.25),
-    clockwise: false,
-  );
-  // Inner crescent edge back down.
-  path.arcToPoint(
-    Offset(cx + moonR * 1.3, rise),
-    radius: Radius.circular(moonR * 0.9),
-    clockwise: true,
-  );
-  path.lineTo(w - r, rise);
-  path.quadraticBezierTo(w, rise, w, rise + r);
   path.lineTo(w, h);
   path.lineTo(0, h);
   path.close();

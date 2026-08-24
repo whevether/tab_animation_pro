@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tab_animation_pro/tab_animation_pro.dart';
 
@@ -252,6 +252,36 @@ void main() {
         ),
       ),
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('moonTwinkle feedback with waterDrop indicator builds',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: TabAnimationPro(
+            items: [
+              TabItem(label: 'A', icon: TabGraphic.icon(Icons.home)),
+              TabItem(label: 'B', icon: TabGraphic.icon(Icons.search)),
+              TabItem(label: 'C', icon: TabGraphic.icon(Icons.star)),
+              TabItem(label: 'D', icon: TabGraphic.icon(Icons.person)),
+            ],
+            currentIndex: 0,
+            onTap: (_) {},
+            shape: TabBarShape.rounded,
+            animation: TabAnimationStyle.waterDrop,
+            indicatorAnimation: TabIndicatorStyle.waterDrop,
+            feedbackAnimation: TabFeedbackAnimation.moonTwinkle,
+            animationDuration: const Duration(milliseconds: 800),
+            animationCurve: Curves.linear,
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('B'));
+    await tester.pump(const Duration(milliseconds: 400));
     expect(tester.takeException(), isNull);
   });
 

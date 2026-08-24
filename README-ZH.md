@@ -31,7 +31,8 @@ Flutter 多外形 Tab 栏：规则/不规则形状、分层动画、可选 3D，
 
 ```yaml
 dependencies:
-  tab_animation_pro: ^0.1.0
+  tab_animation_pro: ^0.2.0
+  material_ui: ^1.0.1
 ```
 
 ```bash
@@ -39,6 +40,7 @@ flutter pub get
 ```
 
 ```dart
+import 'package:material_ui/material_ui.dart';
 import 'package:tab_animation_pro/tab_animation_pro.dart';
 ```
 
@@ -130,8 +132,8 @@ class _HomePageState extends State<HomePage> {
 | `surface` | `TabBarSurface` | `solid` | 填充材质。 |
 | `animation` | `TabAnimationStyle?` | `null` | 一键预设（指示器+项+反馈+栏体运动）。未设时默认指示器 `slidingPill`、项 `colorTween`。 |
 | `indicatorAnimation` | `TabIndicatorStyle?` | `null` | 覆盖预设的指示器。 |
-| `itemAnimation` | `TabItemAnimation?` | `null` | 覆盖预设的项动画。`enable3D` 时强制 `colorTween`，避免 2D/3D 叠变换。水滴模式强制 `none`。 |
-| `feedbackAnimation` | `TabFeedbackAnimation?` | `null` | 覆盖预设的点击反馈。水滴模式强制 `none`。 |
+| `itemAnimation` | `TabItemAnimation?` | `null` | 覆盖预设的项动画。`enable3D` 时强制 `colorTween`，避免 2D/3D 叠变换。水滴模式强制 `none`（配合图标揭示）。 |
+| `feedbackAnimation` | `TabFeedbackAnimation?` | `null` | 覆盖预设的点击反馈。与水滴独立，可同时开 `starTwinkle` / `moonTwinkle`。 |
 | `barMotion` | `TabBarMotion?` | `null` | 覆盖预设的栏体路径运动。 |
 | `enable3D` | `bool` | `false` | 对每项施加透视变换。水滴模式自动关闭。 |
 | `threeDStyle` | `Tab3DStyle` | `flip` | 3D 样式。 |
@@ -156,7 +158,7 @@ class _HomePageState extends State<HomePage> {
 | `animationCurve` | `Curve` | `easeOutCubic` | 切换曲线。水滴必须用 **`Curves.linear`**（内部用水滴原始 0–1，不再套曲线）。 |
 | `showLabels` | `bool` | `true` | 是否画 `TabItem.label`。水滴同样生效。 |
 | `customBarPath` | `TabBarPathBuilder?` | `null` | `shape: custom` 时的路径。 |
-| `safeArea` | `bool` | `true` | 按 `position` 只垫对应边（底栏垫 bottom，顶栏垫 top，侧栏垫 left/right）。 |
+| `safeArea` | `bool` | `true` | 按 `position` 只垫对应边（底栏垫 bottom，顶栏垫 top，侧栏垫 left/right）。仅系统 inset **条带**用栏背景色填满（保留 FAB 缺口镂空）。 |
 | `fabConfig` | `TabFabConfig` | center + verySmoothEdge | FAB。`container` / `sCurve` / `sDivider` 忽略。仅 `center` 挖圆形缺口并让 Tab 让位；`topLeft` / `topRight` / `left` / `right` 在栏外。 |
 
 ## TabItem
@@ -374,11 +376,11 @@ TabAnimationPro(
 )
 ```
 
-只用水滴指示器、栏体用别的外形时：`indicatorAnimation: TabIndicatorStyle.waterDrop`，并同样使用 800ms linear。
+只用水滴指示器、栏体用别的外形时：`indicatorAnimation: TabIndicatorStyle.waterDrop`，并同样使用 800ms linear。`starTwinkle` / `moonTwinkle` 等 feedback 与水滴独立，可同时开启。
 
-### moonIn / moonOut
+### moonTwinkle
 
-选中槽上的月牙：`moonIn` 往里切，`moonOut` 往外鼓。
+月牙粒子在**选中项的图标和文字**周围闪烁（与 `starTwinkle` 同层）。使用 `feedbackAnimation: TabFeedbackAnimation.moonTwinkle`，或预设 `TabAnimationStyle.moonTwinkle`。
 
 ### container
 
@@ -479,6 +481,7 @@ customBarPath: (size, selectedIndex, itemCount, progress) {
 | `worm` | worm | bounce | | |
 | `waterDrop` | waterDrop | none | | |
 | `starTwinkle` | starTwinkle | pulse | starTwinkle | |
+| `moonTwinkle` | moonTwinkle | pulse | moonTwinkle | |
 | `chipExpand` | chipExpand | labelReveal | | |
 | `flashy` | none | flashy | | |
 | `bubblePop` | bubblePop | bounce | | |
@@ -507,6 +510,7 @@ customBarPath: (size, selectedIndex, itemCount, progress) {
 | `gradientSpotlight` | 渐变光斑 |
 | `waterDrop` | 见水滴外形 |
 | `starTwinkle` | 星星闪烁（配合 feedback） |
+| `moonTwinkle` | 月牙闪烁（配合 feedback） |
 | `liquidBlob` / `liquidMorph` | 液态斑块 |
 | `chipExpand` | 芯片式展开 |
 | `custom` | 预留 |
@@ -545,6 +549,7 @@ customBarPath: (size, selectedIndex, itemCount, progress) {
 | `badgePop` | 选中项徽标缩放 |
 | `haptic` | 仅触觉 |
 | `starTwinkle` | 星星粒子（`colors.star`） |
+| `moonTwinkle` | 月牙粒子（`colors.star`） |
 
 ### 栏体 `TabBarMotion`
 
@@ -694,7 +699,7 @@ threeDStyle: Tab3DStyle.coverflow,
 ## 手势、安全区、减弱动效
 
 - **`enableDragSelect`**：在栏上水平快滑切相邻项（不循环到尽头之外）。
-- **`safeArea`**：只垫 `position` 对应那一边，避免底栏再垫 top。
+- **`safeArea`**：只垫 `position` 对应那一边，避免底栏再垫 top。仅系统 inset 条带用栏背景色填满，保留 FAB 缺口镂空。
 - **`respectReduceMotion`**：系统关闭动画时，指示器/3D/栏体运动关掉，项改为 fade。
 - **`margin`**：整栏外边距，加在 SafeArea 内侧。
 

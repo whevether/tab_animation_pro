@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../layout/tab_slot_geometry.dart';
 import '../../models/enums.dart';
@@ -173,6 +173,14 @@ class _IndicatorPainter extends CustomPainter {
           Offset(cx, cy - 4),
           10 * t,
           Paint()..color = color.withValues(alpha: 0.18),
+        );
+      case TabIndicatorStyle.moonTwinkle:
+        // Soft spotlight under moons; crescents are feedback overlay.
+        final t = Curves.easeOutBack.transform(progress.clamp(0.0, 1.0));
+        canvas.drawCircle(
+          Offset(cx, cy - 4),
+          10 * t,
+          Paint()..color = color.withValues(alpha: 0.16),
         );
       case TabIndicatorStyle.dot:
         canvas.drawCircle(

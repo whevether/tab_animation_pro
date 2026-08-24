@@ -1,6 +1,6 @@
 import 'dart:ui' show lerpDouble;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Circular reveal used by water_drop_nav_bar `IconClipper`.
 class _CircleRevealClipper extends CustomClipper<Rect> {

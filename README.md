@@ -31,7 +31,8 @@ Pure Dart — no plugins. Lottie / GIF stay in the host app.
 
 ```yaml
 dependencies:
-  tab_animation_pro: ^0.1.0
+  tab_animation_pro: ^0.2.0
+  material_ui: ^1.0.1
 ```
 
 ```bash
@@ -39,6 +40,7 @@ flutter pub get
 ```
 
 ```dart
+import 'package:material_ui/material_ui.dart';
 import 'package:tab_animation_pro/tab_animation_pro.dart';
 ```
 
@@ -130,8 +132,8 @@ You own selection: update `index` in `onTap` and pass it back as `currentIndex`.
 | `surface` | `TabBarSurface` | `solid` | Fill treatment. |
 | `animation` | `TabAnimationStyle?` | `null` | Preset (indicator + item + feedback + bar motion). If unset: indicator `slidingPill`, item `colorTween`. |
 | `indicatorAnimation` | `TabIndicatorStyle?` | `null` | Overrides the preset indicator. |
-| `itemAnimation` | `TabItemAnimation?` | `null` | Overrides the preset item motion. `enable3D` forces `colorTween`. Water-drop forces `none`. |
-| `feedbackAnimation` | `TabFeedbackAnimation?` | `null` | Overrides preset feedback. Water-drop forces `none`. |
+| `itemAnimation` | `TabItemAnimation?` | `null` | Overrides the preset item motion. `enable3D` forces `colorTween`. Water-drop forces `none` (icon reveal). |
+| `feedbackAnimation` | `TabFeedbackAnimation?` | `null` | Overrides preset feedback. Independent of water-drop (e.g. `starTwinkle` / `moonTwinkle` can coexist). |
 | `barMotion` | `TabBarMotion?` | `null` | Overrides preset path motion. |
 | `enable3D` | `bool` | `false` | Perspective per item. Ignored in water-drop mode. |
 | `threeDStyle` | `Tab3DStyle` | `flip` | 3D style. |
@@ -156,7 +158,7 @@ You own selection: update `index` in `onTap` and pass it back as `currentIndex`.
 | `animationCurve` | `Curve` | `easeOutCubic` | Water-drop must be **`Curves.linear`** (the drip uses the raw 0–1 controller). |
 | `showLabels` | `bool` | `true` | Draw `TabItem.label`. Also applies to water-drop. |
 | `customBarPath` | `TabBarPathBuilder?` | `null` | Used when `shape: custom`. |
-| `safeArea` | `bool` | `true` | Pads only the edge that matches `position`. |
+| `safeArea` | `bool` | `true` | Pads only the edge that matches `position`. Only the system-inset *strips* are filled with the bar background (FAB notch stays hollow). |
 | `fabConfig` | `TabFabConfig` | center + verySmoothEdge | FAB. Ignored on `container` / `sCurve` / `sDivider`. Only `center` cuts a circular notch and splits tabs; `topLeft` / `topRight` / `left` / `right` sit outside the bar. |
 
 ## TabItem
@@ -343,11 +345,11 @@ indicatorColor: Colors.teal,
 fabConfig: const TabFabConfig(location: TabFabLocation.center),
 ```
 
-You can also set `indicatorAnimation: TabIndicatorStyle.waterDrop` on another shape; still use 800ms linear.
+You can also set `indicatorAnimation: TabIndicatorStyle.waterDrop` on another shape; still use 800ms linear. Feedback such as `starTwinkle` / `moonTwinkle` is independent and can run at the same time.
 
-### moonIn / moonOut
+### moonTwinkle
 
-Crescent on the selected slot: cut inward vs bulge outward.
+Crescent moons twinkle around the **selected icon and label** (same layer as `starTwinkle`). Use `feedbackAnimation: TabFeedbackAnimation.moonTwinkle` or the `TabAnimationStyle.moonTwinkle` preset.
 
 ### container
 
@@ -428,6 +430,7 @@ Four layers. Resolve order:
 | `worm` | worm | bounce | | |
 | `waterDrop` | waterDrop | none | | |
 | `starTwinkle` | starTwinkle | pulse | starTwinkle | |
+| `moonTwinkle` | moonTwinkle | pulse | moonTwinkle | |
 | `chipExpand` | chipExpand | labelReveal | | |
 | `flashy` | none | flashy | | |
 | `bubblePop` | bubblePop | bounce | | |
@@ -456,6 +459,7 @@ Four layers. Resolve order:
 | `gradientSpotlight` | Gradient spotlight |
 | `waterDrop` | See water-drop shape |
 | `starTwinkle` | Sparkles (with feedback) |
+| `moonTwinkle` | Crescents (with feedback) |
 | `liquidBlob` / `liquidMorph` | Liquid blob |
 | `chipExpand` | Chip expansion |
 | `custom` | Reserved |
@@ -494,6 +498,7 @@ When `showLabels` is true every item keeps its label. `shift` / `labelReveal` / 
 | `badgePop` | Scale selected badge |
 | `haptic` | Haptic only |
 | `starTwinkle` | Sparkles (`colors.star`) |
+| `moonTwinkle` | Crescent moons (`colors.star`) |
 
 ### Bar `TabBarMotion`
 
@@ -612,7 +617,7 @@ threeDStyle: Tab3DStyle.coverflow,
 ## Gestures, SafeArea, reduce motion
 
 - **`enableDragSelect`**: horizontal fling on the bar; does not wrap at the ends.
-- **`safeArea`**: pads only the edge for `position`.
+- **`safeArea`**: pads only the edge for `position`. Only system-inset strips are filled with the bar background (keeps FAB notch hollow).
 - **`respectReduceMotion`**: system “disable animations” turns off indicator/3D/bar motion and uses fade on items.
 - **`margin`**: outside padding, inside SafeArea.
 
@@ -640,7 +645,7 @@ flutter run
 | Page | What it shows |
 |------|----------------|
 | Regular shapes | Regular outlines |
-| Irregular shapes | Convex / `materialNotch` / `curvedNotch` / water drop / moon |
+| Irregular shapes | Convex / `materialNotch` / `curvedNotch` / water drop |
 | Container / S-curve | Joined tabs, piano keys; four-edge layout |
 | Colors | Water-drop palettes with labels and badges |
 | Item shapes | Selected-item clips |

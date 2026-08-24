@@ -16,7 +16,7 @@ subprojects {
         if (plugins.hasPlugin("com.android.application") ||
             plugins.hasPlugin("com.android.library")
         ) {
-            extensions.configure<CommonExtension<*, *, *, *, *, *>> {
+            extensions.configure<CommonExtension> {
                 compileSdk {
                     version = release(37)
                 }

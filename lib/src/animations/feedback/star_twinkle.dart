@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Sparkle stars around the selected tab (feedback / indicator accent).
 class StarTwinklePainter extends CustomPainter {

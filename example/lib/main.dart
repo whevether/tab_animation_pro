@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:lottie/lottie.dart';
 import 'package:tab_animation_pro/tab_animation_pro.dart';
 
@@ -339,6 +339,9 @@ class _IrregularShapesPageState extends State<IrregularShapesPage> {
   TabBarShape shape = TabBarShape.convexReact;
   TabFabLocation fabLocation = TabFabLocation.center;
   TabNotchSmoothness notchSmoothness = TabNotchSmoothness.verySmoothEdge;
+  bool waterDropIndicator = false;
+  /// 0 = elasticPop, 1 = starTwinkle, 2 = moonTwinkle
+  int sparkleFeedback = 0;
 
   static const shapes = [
     TabBarShape.convexFixed,
@@ -349,14 +352,21 @@ class _IrregularShapesPageState extends State<IrregularShapesPage> {
     TabBarShape.bubble,
     TabBarShape.wave,
     TabBarShape.waterDrop,
-    TabBarShape.moonIn,
-    TabBarShape.moonOut,
   ];
 
   @override
   Widget build(BuildContext context) {
-    final isWater = shape == TabBarShape.waterDrop;
-    final isMoon = shape == TabBarShape.moonIn || shape == TabBarShape.moonOut;
+    final isWaterShape = shape == TabBarShape.waterDrop;
+    final useWater = isWaterShape || waterDropIndicator;
+    final canToggleWaterIndicator = !isWaterShape &&
+        shape != TabBarShape.materialNotch &&
+        shape != TabBarShape.curvedNotch;
+    final TabFeedbackAnimation feedback = switch (sparkleFeedback) {
+      1 => TabFeedbackAnimation.starTwinkle,
+      2 => TabFeedbackAnimation.moonTwinkle,
+      _ => TabFeedbackAnimation.elasticPop,
+    };
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(title: const Text('Irregular shapes')),
@@ -372,8 +382,37 @@ class _IrregularShapesPageState extends State<IrregularShapesPage> {
                   ChoiceChip(
                     label: Text(s.name),
                     selected: shape == s,
-                    onSelected: (_) => setState(() => shape = s),
+                    onSelected: (_) => setState(() {
+                      shape = s;
+                      if (s == TabBarShape.waterDrop) {
+                        waterDropIndicator = false;
+                      }
+                    }),
                   ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (canToggleWaterIndicator)
+                  FilterChip(
+                    label: const Text('waterDrop indicator'),
+                    selected: waterDropIndicator,
+                    onSelected: (v) => setState(() => waterDropIndicator = v),
+                  ),
+                FilterChip(
+                  label: const Text('starTwinkle'),
+                  selected: sparkleFeedback == 1,
+                  onSelected: (v) => setState(() => sparkleFeedback = v ? 1 : 0),
+                ),
+                FilterChip(
+                  label: const Text('moonTwinkle'),
+                  selected: sparkleFeedback == 2,
+                  onSelected: (v) => setState(() => sparkleFeedback = v ? 2 : 0),
+                ),
               ],
             ),
             _FabLocationChips(
@@ -399,31 +438,29 @@ class _IrregularShapesPageState extends State<IrregularShapesPage> {
         barMotion: shape == TabBarShape.curvedNotch
             ? TabBarMotion.followNotch
             : TabBarMotion.none,
-        animation: isWater
+        animation: useWater
             ? TabAnimationStyle.waterDrop
-            : isMoon || shape == TabBarShape.curvedNotch
+            : shape == TabBarShape.curvedNotch
                 ? TabAnimationStyle.slideIndicator
                 : TabAnimationStyle.bounce,
-        indicatorAnimation: isWater
+        indicatorAnimation: useWater
             ? TabIndicatorStyle.waterDrop
             : (shape == TabBarShape.materialNotch ||
                     shape == TabBarShape.curvedNotch)
                 ? TabIndicatorStyle.none
                 : null,
-        animationDuration: isWater
+        animationDuration: useWater
             ? const Duration(milliseconds: 800)
             : const Duration(milliseconds: 360),
-        animationCurve: isWater ? Curves.linear : Curves.easeOutCubic,
-        elevation: isWater ? 0 : 8,
-        cornerRadius: isWater
+        animationCurve: useWater ? Curves.linear : Curves.easeOutCubic,
+        elevation: useWater && isWaterShape ? 0 : 8,
+        cornerRadius: isWaterShape
             ? 0
             : (shape == TabBarShape.materialNotch ? 32.0 : 16.0),
         itemAnimation: shape == TabBarShape.curvedNotch
             ? TabItemAnimation.colorTween
             : null,
-        feedbackAnimation: isWater
-            ? TabFeedbackAnimation.none
-            : TabFeedbackAnimation.elasticPop,
+        feedbackAnimation: feedback,
         fabConfig: _demoFab(fabLocation, smoothness: notchSmoothness),
         colors: _kDemoColors,
       ),
@@ -891,10 +928,21 @@ class _IndicatorAnimationsPageState extends State<IndicatorAnimationsPage> {
   int index = 0;
   TabIndicatorStyle indicator = TabIndicatorStyle.slidingPill;
   TabFabLocation fabLocation = TabFabLocation.none;
+  bool starTwinkleFeedback = false;
+  bool moonTwinkleFeedback = false;
 
   @override
   Widget build(BuildContext context) {
     final isWater = indicator == TabIndicatorStyle.waterDrop;
+    final useStar = starTwinkleFeedback ||
+        indicator == TabIndicatorStyle.starTwinkle;
+    final useMoon = moonTwinkleFeedback ||
+        indicator == TabIndicatorStyle.moonTwinkle;
+    final TabFeedbackAnimation? feedback = useMoon
+        ? TabFeedbackAnimation.moonTwinkle
+        : useStar
+            ? TabFeedbackAnimation.starTwinkle
+            : null;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(title: const Text('Indicator animations')),
@@ -914,6 +962,28 @@ class _IndicatorAnimationsPageState extends State<IndicatorAnimationsPage> {
                   ),
             ],
           ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              FilterChip(
+                label: const Text('starTwinkle feedback'),
+                selected: useStar && !useMoon,
+                onSelected: (v) => setState(() {
+                  starTwinkleFeedback = v;
+                  if (v) moonTwinkleFeedback = false;
+                }),
+              ),
+              FilterChip(
+                label: const Text('moonTwinkle feedback'),
+                selected: useMoon,
+                onSelected: (v) => setState(() {
+                  moonTwinkleFeedback = v;
+                  if (v) starTwinkleFeedback = false;
+                }),
+              ),
+            ],
+          ),
           _FabLocationChips(
             location: fabLocation,
             onChanged: (v) => setState(() => fabLocation = v),
@@ -928,13 +998,13 @@ class _IndicatorAnimationsPageState extends State<IndicatorAnimationsPage> {
             ? TabAnimationStyle.waterDrop
             : indicator == TabIndicatorStyle.starTwinkle
                 ? TabAnimationStyle.starTwinkle
-                : null,
+                : indicator == TabIndicatorStyle.moonTwinkle
+                    ? TabAnimationStyle.moonTwinkle
+                    : null,
         indicatorAnimation: indicator,
         itemShape: TabItemShape.stadium,
         itemAnimation: TabItemAnimation.colorTween,
-        feedbackAnimation: indicator == TabIndicatorStyle.starTwinkle
-            ? TabFeedbackAnimation.starTwinkle
-            : null,
+        feedbackAnimation: feedback,
         animationDuration: indicator == TabIndicatorStyle.waterDrop
             ? const Duration(milliseconds: 800)
             : const Duration(milliseconds: 360),

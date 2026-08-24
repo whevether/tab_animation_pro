@@ -88,6 +88,12 @@ class TabAnimationPreset {
           item: TabItemAnimation.pulse,
           feedback: TabFeedbackAnimation.starTwinkle,
         );
+      case TabAnimationStyle.moonTwinkle:
+        return const TabAnimationPreset(
+          indicator: TabIndicatorStyle.moonTwinkle,
+          item: TabItemAnimation.pulse,
+          feedback: TabFeedbackAnimation.moonTwinkle,
+        );
       case TabAnimationStyle.chipExpand:
         return const TabAnimationPreset(
           indicator: TabIndicatorStyle.chipExpand,

@@ -27,10 +27,6 @@ enum TabBarShape {
   bubble,
   wave,
   waterDrop,
-  /// Crescent moon cut into the bar (inward / 往里).
-  moonIn,
-  /// Crescent moon bulging out of the bar (outward / 往外).
-  moonOut,
   /// Joined body + protruding selected tab (tab_container style).
   container,
   /// Piano-key tabs with interlocking S-curve side edges; selected key taps down then rests flush.
@@ -164,6 +160,7 @@ enum TabIndicatorStyle {
   gradientSpotlight,
   waterDrop,
   starTwinkle,
+  moonTwinkle,
   liquidBlob,
   liquidMorph,
   chipExpand,
@@ -201,6 +198,8 @@ enum TabFeedbackAnimation {
   badgePop,
   haptic,
   starTwinkle,
+  /// Crescent moons twinkle around the selected icon and label.
+  moonTwinkle,
 }
 
 /// Motion coupled to the bar path.
@@ -228,6 +227,7 @@ enum TabAnimationStyle {
   worm,
   waterDrop,
   starTwinkle,
+  moonTwinkle,
   chipExpand,
   flashy,
   bubblePop,

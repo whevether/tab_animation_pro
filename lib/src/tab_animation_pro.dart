@@ -1,10 +1,11 @@
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import 'animations/feedback/moon_twinkle.dart';
 import 'animations/feedback/star_twinkle.dart';
 import 'animations/indicator/indicator_layer.dart';
 import 'animations/indicator/water_drop_nav_painter.dart';
@@ -275,8 +276,9 @@ class _TabAnimationProState extends State<TabAnimationPro>
     final preset = _preset;
     final reduce = _reduceMotion;
 
-    final wantsSparkle =
-        !reduce && preset.feedback == TabFeedbackAnimation.starTwinkle;
+    final wantsSparkle = !reduce &&
+        (preset.feedback == TabFeedbackAnimation.starTwinkle ||
+            preset.feedback == TabFeedbackAnimation.moonTwinkle);
     if (wantsSparkle) {
       if (!_sparkle.isAnimating) _sparkle.repeat();
     } else if (_sparkle.isAnimating) {
@@ -310,10 +312,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
         final isNotch = isMaterialNotch || isCurvedNotch;
         final isConvexBump = widget.shape == TabBarShape.convexFixed ||
             widget.shape == TabBarShape.convexReact ||
-            widget.shape == TabBarShape.bubble ||
-            widget.shape == TabBarShape.moonOut;
-        final isMoon = widget.shape == TabBarShape.moonIn ||
-            widget.shape == TabBarShape.moonOut;
+            widget.shape == TabBarShape.bubble;
         final isSDivider = widget.shape == TabBarShape.sDivider;
         final isSCurve = widget.shape == TabBarShape.sCurve;
         final isVertical = widget.position == TabBarPosition.left ||
@@ -424,7 +423,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
             } else {
               final fabCenterX = dockedCenter
                   ? slots.fabCenterX
-                  : (isMoon ? curvedNotchCenter : barSize.width / 2);
+                  : barSize.width / 2;
               path = buildTabBarPath(
                 shape: widget.shape,
                 size: barSize,
@@ -441,7 +440,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
                     ? curvedNotchCenter
                     : (isMaterialNotch
                         ? fabCenterX
-                        : (isMoon ? curvedNotchCenter : slots.centerX(_index))),
+                        : slots.centerX(_index)),
                 customBuilder: widget.customBarPath,
                 notchSmoothness: fab.smoothness,
                 leftCornerRadius: widget.cornerRadius,
@@ -544,9 +543,8 @@ class _TabAnimationProState extends State<TabAnimationPro>
                 : (isCurvedNotch
                     ? TabItemAnimation.colorTween
                     : effectiveItem);
-            final tabFeedback = isWaterDrop
-                ? TabFeedbackAnimation.none
-                : preset.feedback;
+            // Feedback (e.g. starTwinkle) stays independent of water-drop mode.
+            final tabFeedback = preset.feedback;
 
             Widget buildSlot(int i) {
               return _TabSlot(
@@ -800,7 +798,10 @@ class _TabAnimationProState extends State<TabAnimationPro>
 
     bar = Padding(padding: widget.margin, child: bar);
     if (widget.safeArea) {
-      bar = SafeArea(
+      // Only paint the system-nav *strips* opaque — never a full rectangle
+      // behind the bar, or FAB notch / path holes lose their hollow look.
+      bar = _SafeAreaOpaqueInsets(
+        color: bg,
         top: widget.position == TabBarPosition.top,
         bottom: widget.position == TabBarPosition.bottom,
         left: widget.position == TabBarPosition.left,
@@ -812,6 +813,102 @@ class _TabAnimationProState extends State<TabAnimationPro>
       type: MaterialType.transparency,
       child: bar,
     );
+  }
+}
+
+/// Like [SafeArea], but fills only the padded inset strips with [color].
+/// The content area stays transparent so path cutouts (FAB notch) show through.
+class _SafeAreaOpaqueInsets extends StatelessWidget {
+  const _SafeAreaOpaqueInsets({
+    required this.color,
+    required this.top,
+    required this.bottom,
+    required this.left,
+    required this.right,
+    required this.child,
+  });
+
+  final Color color;
+  final bool top;
+  final bool bottom;
+  final bool left;
+  final bool right;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = MediaQuery.paddingOf(context);
+    final insets = EdgeInsets.only(
+      top: top ? padding.top : 0,
+      bottom: bottom ? padding.bottom : 0,
+      left: left ? padding.left : 0,
+      right: right ? padding.right : 0,
+    );
+    if (insets == EdgeInsets.zero) return child;
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: CustomPaint(
+            painter: _InsetStripPainter(color: color, insets: insets),
+          ),
+        ),
+        Padding(padding: insets, child: child),
+      ],
+    );
+  }
+}
+
+class _InsetStripPainter extends CustomPainter {
+  const _InsetStripPainter({required this.color, required this.insets});
+
+  final Color color;
+  final EdgeInsets insets;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    if (insets.top > 0) {
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, insets.top), paint);
+    }
+    if (insets.bottom > 0) {
+      canvas.drawRect(
+        Rect.fromLTWH(
+          0,
+          size.height - insets.bottom,
+          size.width,
+          insets.bottom,
+        ),
+        paint,
+      );
+    }
+    if (insets.left > 0) {
+      canvas.drawRect(
+        Rect.fromLTWH(
+          0,
+          insets.top,
+          insets.left,
+          size.height - insets.top - insets.bottom,
+        ),
+        paint,
+      );
+    }
+    if (insets.right > 0) {
+      canvas.drawRect(
+        Rect.fromLTWH(
+          size.width - insets.right,
+          insets.top,
+          insets.right,
+          size.height - insets.top - insets.bottom,
+        ),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _InsetStripPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.insets != insets;
   }
 }
 
@@ -981,14 +1078,6 @@ class _TabSlot extends StatelessWidget {
         child: icon,
       );
     }
-    if (feedback == TabFeedbackAnimation.starTwinkle) {
-      icon = StarTwinkleOverlay(
-        progress: sparkleProgress,
-        active: selected,
-        color: starColor,
-        child: icon,
-      );
-    }
 
     // Avoid stacking 2D flip/rotate/scale on top of 3D (causes crush/warp).
     final motion = enable3D
@@ -1006,6 +1095,23 @@ class _TabSlot extends StatelessWidget {
       labelColor: selected ? labelActiveColor : labelInactiveColor,
       child: icon,
     );
+
+    // Sparkles wrap icon + label so stars/moons twinkle over both.
+    if (feedback == TabFeedbackAnimation.starTwinkle) {
+      body = StarTwinkleOverlay(
+        progress: sparkleProgress,
+        active: selected,
+        color: starColor,
+        child: body,
+      );
+    } else if (feedback == TabFeedbackAnimation.moonTwinkle) {
+      body = MoonTwinkleOverlay(
+        progress: sparkleProgress,
+        active: selected,
+        color: starColor,
+        child: body,
+      );
+    }
 
     if (enable3D) {
       body = Tab3DTransform(

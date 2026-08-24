@@ -2,6 +2,13 @@
 
 [English](CHANGELOG.md)
 
+## 0.2.0
+
+- 改用独立 [`material_ui`](https://pub.dev/packages/material_ui) `^1.0.1`，不再直接 `import package:flutter/material.dart`（需 Dart 3.12 / Flutter 3.44+）
+- SafeArea 系统 inset 用栏背景色填满，避免三键导航机型（如 Galaxy S20）底栏下方内容透出；仅填充 inset **条带**，保留 FAB 缺口镂空
+- 水滴模式不再强制关闭 `feedbackAnimation`：可与 `starTwinkle` / `moonTwinkle` 共存
+- 移除栏体外形 `moonIn` / `moonOut`，改为 `moonTwinkle` 反馈（月牙在选中图标与文字上闪烁，同 `starTwinkle`）
+
 ## 0.1.0
 
 首次发布 `tab_animation_pro`。

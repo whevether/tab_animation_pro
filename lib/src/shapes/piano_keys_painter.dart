@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Paints interlocking piano-key tab silhouettes. The selected key briefly
 /// presses in, then rests flush with the others.

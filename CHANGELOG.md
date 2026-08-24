@@ -2,6 +2,13 @@
 
 [中文](CHANGELOG-ZH.md)
 
+## 0.2.0
+
+- Depend on standalone [`material_ui`](https://pub.dev/packages/material_ui) `^1.0.1` instead of `package:flutter/material.dart` (requires Dart 3.12 / Flutter 3.44+)
+- Fill SafeArea system insets with the bar background so body content does not show through under 3-button navigation (e.g. Galaxy S20). Only the inset *strips* are painted so FAB notch cutouts stay hollow.
+- Water-drop no longer forces `feedbackAnimation` off: `starTwinkle` / `moonTwinkle` can run with the drip
+- Replace bar shapes `moonIn` / `moonOut` with `moonTwinkle` feedback (crescents twinkle on the selected icon and label, like `starTwinkle`)
+
 ## 0.1.0
 
 Initial release of `tab_animation_pro`.

@@ -17,7 +17,7 @@ flutter run
 | Page | What it shows |
 |------|----------------|
 | Regular shapes | Regular bar outlines |
-| Irregular shapes | Convex / notch / `materialNotch` (center FAB cutout) / `curvedNotch` / water drop / moon |
+| Irregular shapes | Convex / notch / `materialNotch` (center FAB cutout) / `curvedNotch` / water drop |
 | Container / S-curve | `container` joined tabs; `sCurve` / `sDivider` piano keys (press then rest flush) |
 | Colors | Water-drop palette (Teal / Indigo / Rose) with labels and badges |
 | Item shapes | Selected-item clip shapes |
