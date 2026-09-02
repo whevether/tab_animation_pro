@@ -31,7 +31,7 @@ Flutter 多外形 Tab 栏：规则/不规则形状、分层动画、可选 3D，
 
 ```yaml
 dependencies:
-  tab_animation_pro: ^0.2.0
+  tab_animation_pro: ^0.2.1
   material_ui: ^1.0.1
 ```
 

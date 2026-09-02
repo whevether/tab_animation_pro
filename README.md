@@ -31,7 +31,7 @@ Pure Dart — no plugins. Lottie / GIF stay in the host app.
 
 ```yaml
 dependencies:
-  tab_animation_pro: ^0.2.0
+  tab_animation_pro: ^0.2.1
   material_ui: ^1.0.1
 ```
 
