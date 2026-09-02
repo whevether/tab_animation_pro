@@ -8,6 +8,7 @@
 - SafeArea 系统 inset 用栏背景色填满，避免三键导航机型（如 Galaxy S20）底栏下方内容透出；仅填充 inset **条带**，保留 FAB 缺口镂空
 - 水滴模式不再强制关闭 `feedbackAnimation`：可与 `starTwinkle` / `moonTwinkle` 共存
 - 移除栏体外形 `moonIn` / `moonOut`，改为 `moonTwinkle` 反馈（月牙在选中图标与文字上闪烁，同 `starTwinkle`）
+- **视觉：** `container` 肩部改为 Chromium 同款 `arcTo` 外凸脚（Chrome 标签页）；`sCurve` / `sDivider` 钢琴键缝线为三阶贝塞尔。公开 API 不变。
 
 ## 0.1.0
 

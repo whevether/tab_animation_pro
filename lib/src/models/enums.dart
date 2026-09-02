@@ -27,9 +27,9 @@ enum TabBarShape {
   bubble,
   wave,
   waterDrop,
-  /// Joined body + protruding selected tab (tab_container style).
+  /// Joined body + protruding selected tab with Chrome-style arc feet.
   container,
-  /// Piano-key tabs with interlocking S-curve side edges; selected key taps down then rests flush.
+  /// Piano-key tabs with cubic Bezier S-curve side edges; selected key taps down then rests flush.
   sCurve,
   /// Piano keys with S-curve seams drawn as divider strokes.
   sDivider,

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tab_animation_pro/tab_animation_pro.dart';
@@ -32,6 +34,66 @@ void main() {
     final rotated = rotateBarPathForSide(path, horizontal);
     expect(rotated.contains(const Offset(8, 40)), isTrue);
     expect(rotated.contains(const Offset(8, 360)), isFalse);
+  });
+
+  test('container chrome feet bulge outward at the tab join', () {
+    const size = Size(400, 110);
+    const tabExtent = 48.0;
+    const tabCorner = 12.0;
+    const count = 4;
+    const selectedIndex = 1;
+    final path = buildContainerTabPath(
+      size: size,
+      selectedIndex: selectedIndex,
+      itemCount: count,
+      tabExtent: tabExtent,
+      tabBorderRadius: tabCorner,
+    );
+    final itemW = size.width / count;
+    final end = (selectedIndex + 1) * itemW;
+    final footR = tabCorner;
+    final bodyY = size.height - tabExtent;
+    // Midpoint of the right-foot quarter arc (pre-flip).
+    final bulge = Offset(
+      end + footR - footR / math.sqrt(2),
+      bodyY + footR - footR / math.sqrt(2),
+    );
+    // Path is Y-flipped for TabEdge.top.
+    final probe = Offset(bulge.dx, size.height - bulge.dy);
+    expect(path.contains(probe), isTrue);
+    expect(path.contains(const Offset(500, 500)), isFalse);
+  });
+
+  test('container path stays valid for a very narrow tab slot', () {
+    final path = buildContainerTabPath(
+      size: const Size(200, 110),
+      selectedIndex: 0,
+      itemCount: 4,
+      tabExtent: 48,
+      tabBorderRadius: 12,
+      indicatorStart: 90,
+      indicatorEnd: 110,
+    );
+    final bounds = path.getBounds();
+    expect(bounds.width, greaterThan(0));
+    expect(bounds.height, greaterThan(0));
+    expect(path.contains(Offset(bounds.center.dx, bounds.center.dy)), isTrue);
+  });
+
+  test('piano keys assign seam midpoints to the correct key', () {
+    const size = Size(400, 64);
+    final keys = buildPianoKeyPaths(
+      size: size,
+      selectedIndex: 1,
+      itemCount: 4,
+    );
+    expect(keys, hasLength(4));
+    expect(keys[0].contains(const Offset(45, 32)), isTrue);
+    expect(keys[1].contains(const Offset(145, 32)), isTrue);
+    expect(keys[2].contains(const Offset(245, 32)), isTrue);
+    expect(keys[3].contains(const Offset(345, 32)), isTrue);
+    expect(keys[0].contains(const Offset(145, 32)), isFalse);
+    expect(keys[1].contains(const Offset(45, 32)), isFalse);
   });
 
   test('item shape paths cover known enums', () {

@@ -353,11 +353,11 @@ Crescent moons twinkle around the **selected icon and label** (same layer as `st
 
 ### container
 
-[tab_container](https://pub.dev/packages/tab_container) style: joined body, selected segment rises, S-shoulders on both sides. Height `tabExtent` (default ~42% of bar height, clamped 36–56), corners `tabCornerRadius`. The strip lerps between tabs while switching.
+Joined body with a protruding selected tab and **Chrome-style outward arc feet** (`arcTo`, aligned with Chromium `TabStyleViews`). Height `tabExtent` (default ~42% of bar height, clamped 36–56), corners `tabCornerRadius`. The strip lerps between tabs while switching.
 
 ### sCurve / sDivider
 
-Interlocking piano keys.
+Interlocking piano keys with **cubic Bezier S seams**.
 
 - Selected key **presses then returns**; at rest all keys share the same top
 - Fill crossfades with `colors.pressed`

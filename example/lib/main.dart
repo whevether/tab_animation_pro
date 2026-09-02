@@ -544,8 +544,8 @@ class _ContainerSCurvePageState extends State<ContainerSCurvePage> {
           const Padding(
             padding: EdgeInsets.all(12),
             child: Text(
-              'container ≈ tab_container (rounded body + protruding tab + concave fillets); '
-              'sCurve / sDivider = piano keys with interlocking S seams; '
+              'container = joined body + protruding tab with Chrome-style arc feet; '
+              'sCurve / sDivider = piano keys with cubic S seams; '
               'selected key taps down then rests flush, with a color crossfade.',
             ),
           ),

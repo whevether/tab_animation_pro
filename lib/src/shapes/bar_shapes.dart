@@ -463,11 +463,109 @@ Path buildTeardropPath(Offset c, double radius, {bool tipUp = true}) {
   return path;
 }
 
+/// Cubic approximation constant for a quarter circle (κ).
+const _kCubicCircle = 0.5522847498;
+
+void _cubicCornerTL(Path path, double r) {
+  final k = _kCubicCircle;
+  path.cubicTo(0, r * (1 - k), r * (1 - k), 0, r, 0);
+}
+
+void _cubicCornerTR(Path path, double w, double r) {
+  final k = _kCubicCircle;
+  path.cubicTo(w - r * (1 - k), 0, w, r * (1 - k), w, r);
+}
+
+void _cubicTabCornerBR(Path path, double x, double y, double r) {
+  final k = _kCubicCircle;
+  path.cubicTo(x, y - r * (1 - k), x - r * (1 - k), y, x - r, y);
+}
+
+void _cubicTabCornerBL(Path path, double x, double y, double r) {
+  final k = _kCubicCircle;
+  path.cubicTo(x + r * (1 - k), y, x, y - r * (1 - k), x, y - r);
+}
+
+/// Chrome tab foot radius uses the same scale as tab corner radius.
+double _chromeFootRadius(double tabRadius, double? critical) {
+  final r = critical ?? tabRadius;
+  return r.clamp(0.0, tabRadius);
+}
+
+/// Right foot: baseline → outward quarter-arc onto the tab edge (Chromium arcTo).
+void _chromeRightFoot(
+  Path path, {
+  required double edgeX,
+  required double bodyY,
+  required double footR,
+}) {
+  if (footR <= 0.5) {
+    path.lineTo(edgeX, bodyY);
+    return;
+  }
+  path.arcTo(
+    Rect.fromLTWH(edgeX, bodyY, footR * 2, footR * 2),
+    -math.pi / 2,
+    -math.pi / 2,
+    false,
+  );
+}
+
+/// Left foot: tab edge → outward quarter-arc onto the baseline (Chromium arcTo).
+void _chromeLeftFoot(
+  Path path, {
+  required double edgeX,
+  required double bodyY,
+  required double footR,
+}) {
+  if (footR <= 0.5) {
+    path.lineTo(edgeX, bodyY);
+    return;
+  }
+  path.arcTo(
+    Rect.fromLTWH(edgeX - footR * 2, bodyY, footR * 2, footR * 2),
+    0,
+    -math.pi / 2,
+    false,
+  );
+}
+
+void _pianoSeamCubic(
+  Path path, {
+  required double x,
+  required double top,
+  required double bottom,
+  required double dir,
+  required double bend,
+  required bool downward,
+}) {
+  final height = bottom - top;
+  if (downward) {
+    path.cubicTo(
+      x + dir * bend * 0.55,
+      top + height * 0.25,
+      x - dir * bend * 0.55,
+      top + height * 0.75,
+      x,
+      bottom,
+    );
+  } else {
+    path.cubicTo(
+      x - dir * bend * 0.55,
+      top + height * 0.75,
+      x + dir * bend * 0.55,
+      top + height * 0.25,
+      x,
+      top,
+    );
+  }
+}
+
 /// tab_container-style joined shape (TabEdge.top geometry).
 ///
 /// Body is a rounded rect; the selected tab protrudes upward with
-/// rounded tab corners and concave quadratic fillets at the join —
-/// matching https://pub.dev/packages/tab_container `RenderTabFrame._getPath`.
+/// cubic-rounded tip corners and Chrome-style arc feet at the join
+/// (see Chromium `TabStyleViews::GetPath`).
 Path buildContainerTabPath({
   required Size size,
   required int selectedIndex,
@@ -521,12 +619,12 @@ Path _containerPathFromBounds(
     end = (mid + tabRadius + 8).clamp(0.0, w);
   }
 
-  // Port of tab_container TabEdge.bottom path, then flip to TabEdge.top.
+  // TabEdge.bottom geometry (flipped to top after build).
   final brx = bodyRadius;
   final blx = bodyRadius;
   final tblx = tabRadius;
   final tbrx = tabRadius;
-  final tryY = tabRadius;
+  final bodyY = h - extent;
 
   double? critical1;
   double? critical2;
@@ -544,34 +642,54 @@ Path _containerPathFromBounds(
     critical4 = blx / sum2 * start;
   }
 
+  var rightFootR = _chromeFootRadius(tabRadius, critical2);
+  var leftFootR = _chromeFootRadius(tabRadius, critical3);
+  rightFootR = math.min(rightFootR, math.max(0.0, w - end));
+  leftFootR = math.min(leftFootR, math.max(0.0, start));
+
   final path = Path()
-    ..moveTo(0, bodyRadius)
-    ..quadraticBezierTo(0, 0, bodyRadius, 0)
-    ..lineTo(w - bodyRadius, 0)
-    ..quadraticBezierTo(w, 0, w, bodyRadius)
-    ..lineTo(w, h - extent - bodyRadius)
-    ..quadraticBezierTo(
-      w,
-      h - extent,
-      math.max(w - (critical1 ?? brx), end),
-      h - extent,
-    )
-    ..lineTo(math.min(w, end + (critical2 ?? tblx)), h - extent)
-    ..quadraticBezierTo(end, h - extent, end, h - extent + tabRadius)
-    ..lineTo(end, h - tryY)
-    ..quadraticBezierTo(end, h, end - tabRadius, h)
-    ..lineTo(start + tabRadius, h)
-    ..quadraticBezierTo(start, h, start, h - tryY)
-    ..lineTo(start, h - extent + tabRadius)
-    ..quadraticBezierTo(
-      start,
-      h - extent,
-      math.max(0, start - (critical3 ?? tbrx)),
-      h - extent,
-    )
-    ..lineTo(math.min(critical4 ?? blx, start), h - extent)
-    ..quadraticBezierTo(0, h - extent, 0, h - extent - bodyRadius)
-    ..close();
+    ..moveTo(0, bodyRadius);
+  _cubicCornerTL(path, bodyRadius);
+  path.lineTo(w - bodyRadius, 0);
+  _cubicCornerTR(path, w, bodyRadius);
+  path.lineTo(w, bodyY - bodyRadius);
+  path.cubicTo(
+    w,
+    bodyY - bodyRadius * (1 - _kCubicCircle),
+    w,
+    bodyY,
+    math.max(w - (critical1 ?? brx), end),
+    bodyY,
+  );
+  path.lineTo(end + rightFootR, bodyY);
+  _chromeRightFoot(
+    path,
+    edgeX: end,
+    bodyY: bodyY,
+    footR: rightFootR,
+  );
+  path.lineTo(end, h - tabRadius);
+  _cubicTabCornerBR(path, end, h, tabRadius);
+  path.lineTo(start + tabRadius, h);
+  _cubicTabCornerBL(path, start, h, tabRadius);
+  path.lineTo(start, bodyY + leftFootR);
+  _chromeLeftFoot(
+    path,
+    edgeX: start,
+    bodyY: bodyY,
+    footR: leftFootR,
+  );
+  final blStartX = math.min(critical4 ?? blx, start - leftFootR);
+  path.lineTo(blStartX, bodyY);
+  path.cubicTo(
+    blStartX * 0.45,
+    bodyY,
+    0,
+    bodyY - bodyRadius * (1 - _kCubicCircle),
+    0,
+    bodyY - bodyRadius,
+  );
+  path.close();
 
   // Flip to TabEdge.top: tab protrudes upward.
   return path.transform(
@@ -642,13 +760,6 @@ List<Path> buildPianoKeyPaths({
 
   const baseTop = 0.0;
 
-  double seamX(int afterIndex, double t) {
-    final base = (afterIndex + 1) * keyW;
-    final dir = afterIndex.isEven ? 1.0 : -1.0;
-    final s = math.sin(t * math.pi);
-    return base + dir * b * s;
-  }
-
   final paths = <Path>[];
   for (var i = 0; i < n; i++) {
     final press = _pianoPressOffset(
@@ -662,30 +773,41 @@ List<Path> buildPianoKeyPaths({
     final keyTop = baseTop + press;
     final path = Path();
 
-    const steps = 18;
-    final left0 = i == 0 ? 0.0 : seamX(i - 1, 0);
-    final right0 = i == n - 1 ? w : seamX(i, 0);
-    path.moveTo(left0, keyTop);
-    path.lineTo(right0, keyTop);
+    final leftX = i == 0 ? 0.0 : (i) * keyW;
+    final rightX = i == n - 1 ? w : (i + 1) * keyW;
+    path.moveTo(leftX, keyTop);
+    path.lineTo(rightX, keyTop);
 
     if (i == n - 1) {
       path.lineTo(w, bottom);
     } else {
-      for (var s = 1; s <= steps; s++) {
-        final t = s / steps;
-        path.lineTo(seamX(i, t), keyTop + (bottom - keyTop) * t);
-      }
+      final dir = i.isEven ? 1.0 : -1.0;
+      _pianoSeamCubic(
+        path,
+        x: rightX,
+        top: keyTop,
+        bottom: bottom,
+        dir: dir,
+        bend: b,
+        downward: true,
+      );
     }
 
-    path.lineTo(i == 0 ? 0.0 : seamX(i - 1, 1), bottom);
+    path.lineTo(i == 0 ? 0.0 : leftX, bottom);
 
     if (i == 0) {
       path.lineTo(0, keyTop);
     } else {
-      for (var s = steps - 1; s >= 0; s--) {
-        final t = s / steps;
-        path.lineTo(seamX(i - 1, t), keyTop + (bottom - keyTop) * t);
-      }
+      final dir = (i - 1).isEven ? 1.0 : -1.0;
+      _pianoSeamCubic(
+        path,
+        x: leftX,
+        top: keyTop,
+        bottom: bottom,
+        dir: dir,
+        bend: b,
+        downward: false,
+      );
     }
     path.close();
     paths.add(path);
@@ -712,13 +834,6 @@ List<Path> buildPianoSeamPaths({
   final easeP = Curves.easeInOutCubic.transform(progress.clamp(0.0, 1.0));
   final depth = math.min(pressDepth, h * 0.14);
 
-  double seamX(int afterIndex, double t) {
-    final base = (afterIndex + 1) * keyW;
-    final dir = afterIndex.isEven ? 1.0 : -1.0;
-    return base + dir * b * math.sin(t * math.pi);
-  }
-
-  const steps = 18;
   final paths = <Path>[];
   for (var i = 0; i < n - 1; i++) {
     final top = math.max(
@@ -737,12 +852,18 @@ List<Path> buildPianoSeamPaths({
         depth: depth,
       ),
     );
-    final path = Path();
-    path.moveTo(seamX(i, 0), top);
-    for (var s = 1; s <= steps; s++) {
-      final t = s / steps;
-      path.lineTo(seamX(i, t), top + (h - top) * t);
-    }
+    final x = (i + 1) * keyW;
+    final dir = i.isEven ? 1.0 : -1.0;
+    final path = Path()..moveTo(x, top);
+    _pianoSeamCubic(
+      path,
+      x: x,
+      top: top,
+      bottom: h,
+      dir: dir,
+      bend: b,
+      downward: true,
+    );
     paths.add(path);
   }
   return paths;

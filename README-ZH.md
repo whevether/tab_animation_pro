@@ -384,7 +384,7 @@ TabAnimationPro(
 
 ### container
 
-[tab_container](https://pub.dev/packages/tab_container) 风格：栏体连成一块，选中段凸起，两侧 S 肩衔接。凸起高度 `tabExtent`（默认约栏高 42%，夹在 36–56），凸起圆角 `tabCornerRadius`。
+连体栏 + 选中段凸起，两侧用 **Chrome 风格外凸圆弧脚**（`arcTo`，对齐 Chromium `TabStyleViews`）衔接。凸起高度 `tabExtent`（默认约栏高 42%，夹在 36–56），凸起圆角 `tabCornerRadius`。
 
 ```dart
 shape: TabBarShape.container,
@@ -397,7 +397,7 @@ barMotion: TabBarMotion.none,
 
 ### sCurve / sDivider
 
-交错 S 边钢琴键。
+交错 S 边钢琴键（缝线为三阶贝塞尔曲线）。
 
 - 选中键**按下再弹回**，静止时与其它键**顶边齐平**
 - 选中填充用 `colors.pressed` 交叉淡入
