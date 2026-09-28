@@ -2,6 +2,11 @@
 
 [English](CHANGELOG.md)
 
+## 0.2.2
+
+- `material_ui` 升级至 `^1.4.0`（需 Dart 3.13 / Flutter 3.47+）
+- 示例：AGP `9.4.1`、`android.builtInKotlin=true`、`lottie` `^3.6.1`
+
 ## 0.2.1
 
 - **视觉：** `container` 肩部改为 Chromium 同款 `arcTo` 外凸脚（Chrome 标签页）；`sCurve` / `sDivider` 钢琴键缝线为三阶贝塞尔。公开 API 不变。

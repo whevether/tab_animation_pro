@@ -2,6 +2,11 @@
 
 [中文](CHANGELOG-ZH.md)
 
+## 0.2.2
+
+- Bump `material_ui` to `^1.4.0` (requires Dart 3.13 / Flutter 3.47+)
+- Example: AGP `9.4.1`, `android.builtInKotlin=true`, `lottie` `^3.6.1`
+
 ## 0.2.1
 
 - **Visual:** `container` tab shoulders use Chromium-style outward `arcTo` feet (Chrome tabs); `sCurve` / `sDivider` piano seams use cubic Bezier curves. Public API unchanged.
