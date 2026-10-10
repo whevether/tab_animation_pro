@@ -2,6 +2,11 @@
 
 [English](CHANGELOG.md)
 
+## 0.2.3
+
+- `material_ui` 升级至 `^1.6.0`
+- 示例：AGP `9.4.2`、Kotlin `2.4.21`、Gradle `9.8.0`、NDK `30.0.16248370`
+
 ## 0.2.2
 
 - `material_ui` 升级至 `^1.4.0`（需 Dart 3.13 / Flutter 3.47+）

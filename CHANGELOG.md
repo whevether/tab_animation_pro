@@ -2,6 +2,11 @@
 
 [中文](CHANGELOG-ZH.md)
 
+## 0.2.3
+
+- Bump `material_ui` to `^1.6.0`
+- Example: AGP `9.4.2`, Kotlin `2.4.21`, Gradle `9.8.0`, NDK `30.0.16248370`
+
 ## 0.2.2
 
 - Bump `material_ui` to `^1.4.0` (requires Dart 3.13 / Flutter 3.47+)
