@@ -251,7 +251,11 @@ Path _materialNotch(
         ),
       );
   }
-  final r = math.max(radius * t, 1.0);
+  final r = math.min(
+    math.max(radius * t, 1.0),
+    math.max(0.0, (w - 16) / 2),
+  );
+  if (r == 0) return Path()..addRect(Offset.zero & size);
   final cx = centerX.clamp(r + 8, w - r - 8);
   return _circularNotchedAndCorneredPath(
     host: Offset.zero & size,
@@ -349,7 +353,11 @@ Path applyDockedFabNotch({
   final bounds = source.getBounds();
   final t = appear.clamp(0.0, 1.0);
   if (bounds.isEmpty || radius <= 0 || t <= 0.001) return source;
-  final r = math.max(radius * t, 1.0);
+  final r = math.min(
+    math.max(radius * t, 1.0),
+    math.max(0.0, (bounds.width - 16) / 2),
+  );
+  if (r == 0) return source;
   final cx = centerX.clamp(bounds.left + r + 8, bounds.right - r - 8);
   final notched = _circularNotchedAndCorneredPath(
     host: bounds,
@@ -372,10 +380,10 @@ Path _curvedNotch(Size size, double centerX, double radius, double corner) {
   final host = math.min(radius, math.min(w * 0.09, 22.0)).clamp(16.0, 22.0);
   final shoulder = host * 0.55;
   final depth = host * 0.72;
-  final cx = centerX.clamp(
-    host + shoulder + corner + 2,
-    w - host - shoulder - corner - 2,
-  );
+  final clearance = host + shoulder + corner + 2;
+  final cx = w < clearance * 2
+      ? w / 2
+      : centerX.clamp(clearance, w - clearance);
 
   final path = Path();
   path.moveTo(0, math.min(corner, h));

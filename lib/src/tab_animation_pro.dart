@@ -42,6 +42,7 @@ class TabAnimationPro extends StatefulWidget {
     this.itemAnimation,
     this.feedbackAnimation,
     this.barMotion,
+    this.scrollController,
     this.enable3D = false,
     this.threeDStyle = Tab3DStyle.flip,
     this.perspective = 0.0008,
@@ -85,6 +86,10 @@ class TabAnimationPro extends StatefulWidget {
   final TabFeedbackAnimation? feedbackAnimation;
   final TabBarMotion? barMotion;
 
+  /// Scroll view to observe for [TabBarMotion.minimizeOnScroll], including
+  /// when this bar is in Scaffold.bottomNavigationBar. Owned by the caller.
+  final ScrollController? scrollController;
+
   final bool enable3D;
   final Tab3DStyle threeDStyle;
   final double perspective;
@@ -97,6 +102,7 @@ class TabAnimationPro extends StatefulWidget {
   final Color? backgroundColor;
   final Color? activeColor;
   final Color? inactiveColor;
+
   /// Color of the selection indicator. For [TabBarShape.waterDrop] /
   /// [TabIndicatorStyle.waterDrop] this is the hanging drip and falling bead
   /// (falls back to [activeColor]).
@@ -139,37 +145,40 @@ class _TabAnimationProState extends State<TabAnimationPro>
   late int _index;
   late int _previousIndex;
   late AnimationController _controller;
-  late AnimationController _sparkle;
   late AnimationController _fabPop;
-  late Animation<double> _progress;
-  late Animation<double> _fabAppear;
+  late CurvedAnimation _progress;
+  late CurvedAnimation _fabAppear;
   bool _minimized = false;
+  double _lastScrollOffset = 0;
+
+  int _validIndex(int index) =>
+      widget.items.isEmpty ? 0 : index.clamp(0, widget.items.length - 1);
 
   @override
   void initState() {
     super.initState();
-    _index = widget.controller?.index ?? widget.currentIndex;
+    _index = _validIndex(widget.controller?.index ?? widget.currentIndex);
     _previousIndex = _index;
     _controller = AnimationController(
       vsync: this,
       duration: widget.animationDuration,
-    );
-    _sparkle = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
     );
     _fabPop = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
       value: 1,
     );
-    _progress = CurvedAnimation(parent: _controller, curve: widget.animationCurve);
+    _progress = CurvedAnimation(
+      parent: _controller,
+      curve: widget.animationCurve,
+    );
     _fabAppear = CurvedAnimation(
       parent: _fabPop,
       curve: const Interval(0.5, 1, curve: Curves.fastOutSlowIn),
     );
     _controller.value = 1;
     widget.controller?.addListener(_onController);
+    _listenToScroll();
   }
 
   @override
@@ -179,19 +188,71 @@ class _TabAnimationProState extends State<TabAnimationPro>
       oldWidget.controller?.removeListener(_onController);
       widget.controller?.addListener(_onController);
     }
-    if (widget.controller == null && widget.currentIndex != _index) {
-      _animateTo(widget.currentIndex);
+    if (oldWidget.scrollController != widget.scrollController) {
+      oldWidget.scrollController?.removeListener(_onScroll);
+      _listenToScroll();
     }
-    if (oldWidget.animationDuration != widget.animationDuration) {
-      _controller.duration = widget.animationDuration;
+    _controller.duration = widget.animationDuration;
+    _progress.curve = widget.animationCurve;
+    final next = _validIndex(
+      widget.controller?.index ??
+          (oldWidget.currentIndex != widget.currentIndex ||
+                  oldWidget.controller != widget.controller
+              ? widget.currentIndex
+              : _index),
+    );
+    _index = _validIndex(_index);
+    _previousIndex = _validIndex(_previousIndex);
+    _animateTo(next);
+    if (_reduceMotion) {
+      _controller.value = 1;
+      _fabPop.value = 1;
+      _minimized = false;
     }
+    if (_preset.barMotion != TabBarMotion.minimizeOnScroll) _minimized = false;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_reduceMotion) {
+      _controller.value = 1;
+      _fabPop.value = 1;
+      _minimized = false;
+    }
+  }
+
+  void _listenToScroll() {
+    final scroll = widget.scrollController;
+    _lastScrollOffset = scroll != null && scroll.positions.length == 1
+        ? scroll.position.pixels
+        : (scroll?.initialScrollOffset ?? 0);
+    scroll?.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    final scroll = widget.scrollController;
+    if (scroll == null || scroll.positions.length != 1) return;
+    final offset = scroll.position.pixels;
+    _handleScrollDelta(offset - _lastScrollOffset);
+    _lastScrollOffset = offset;
+  }
+
+  void _handleScrollDelta(double delta) {
+    if (_preset.barMotion != TabBarMotion.minimizeOnScroll || _reduceMotion) {
+      return;
+    }
+    if (delta > 2 && !_minimized) setState(() => _minimized = true);
+    if (delta < -2 && _minimized) setState(() => _minimized = false);
   }
 
   @override
   void dispose() {
     widget.controller?.removeListener(_onController);
+    widget.scrollController?.removeListener(_onScroll);
+    _progress.dispose();
+    _fabAppear.dispose();
     _controller.dispose();
-    _sparkle.dispose();
     _fabPop.dispose();
     super.dispose();
   }
@@ -217,19 +278,28 @@ class _TabAnimationProState extends State<TabAnimationPro>
   }
 
   void _animateTo(int index) {
-    if (index < 0 || index >= widget.items.length || index == _index) return;
+    index = _validIndex(index);
+    if (widget.items.isEmpty || index == _index) return;
     setState(() {
       _previousIndex = _index;
       _index = index;
     });
-    _controller.forward(from: 0);
+    if (_reduceMotion) {
+      _controller.value = 1;
+    } else {
+      _controller.forward(from: 0);
+    }
   }
 
   void _onTap(int index) {
-    final isWater = widget.shape == TabBarShape.waterDrop ||
+    if (widget.items.isEmpty || index < 0 || index >= widget.items.length) {
+      return;
+    }
+    final isWater =
+        widget.shape == TabBarShape.waterDrop ||
         widget.indicatorAnimation == TabIndicatorStyle.waterDrop ||
         widget.animation == TabAnimationStyle.waterDrop;
-    if (isWater && _controller.isAnimating) return;
+    if (isWater && !_reduceMotion && _controller.isAnimating) return;
     final feedback = _preset.feedback;
     if (feedback == TabFeedbackAnimation.haptic ||
         feedback == TabFeedbackAnimation.elasticPop ||
@@ -260,6 +330,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.items.isEmpty) return const SizedBox.shrink();
     final c = ResolvedTabColors.resolve(
       context,
       colors: widget.colors,
@@ -276,17 +347,6 @@ class _TabAnimationProState extends State<TabAnimationPro>
     final preset = _preset;
     final reduce = _reduceMotion;
 
-    final wantsSparkle = !reduce &&
-        (preset.feedback == TabFeedbackAnimation.starTwinkle ||
-            preset.feedback == TabFeedbackAnimation.moonTwinkle);
-    if (wantsSparkle) {
-      if (!_sparkle.isAnimating) _sparkle.repeat();
-    } else if (_sparkle.isAnimating) {
-      _sparkle
-        ..stop()
-        ..value = 0;
-    }
-
     final effectiveIndicator = () {
       if (reduce) return TabIndicatorStyle.none;
       if (widget.indicatorAnimation != null) return widget.indicatorAnimation!;
@@ -295,48 +355,69 @@ class _TabAnimationProState extends State<TabAnimationPro>
       }
       return preset.indicator;
     }();
-    final effectiveItem =
-        reduce ? TabItemAnimation.fade : preset.item;
+    final effectiveItem = reduce ? TabItemAnimation.fade : preset.item;
     final barMotion = reduce ? TabBarMotion.none : preset.barMotion;
-    final isWaterDrop = effectiveIndicator == TabIndicatorStyle.waterDrop ||
-        widget.shape == TabBarShape.waterDrop;
+    final isWaterDrop =
+        !reduce &&
+        (effectiveIndicator == TabIndicatorStyle.waterDrop ||
+            widget.shape == TabBarShape.waterDrop);
 
     Widget bar = AnimatedBuilder(
-      animation: Listenable.merge([_progress, _sparkle, _fabPop]),
+      animation: Listenable.merge([_progress, _fabPop]),
       builder: (context, _) {
-        final p = isWaterDrop ? _controller.value : _progress.value;
-        final sparkleT = _sparkle.value;
+        final liquid =
+            preset.indicator == TabIndicatorStyle.liquidBlob ||
+            preset.indicator == TabIndicatorStyle.liquidMorph ||
+            preset.barMotion == TabBarMotion.blobFollow;
+        final p = reduce
+            ? 1.0
+            : (isWaterDrop
+                      ? _controller.value
+                      : (liquid
+                            ? widget.spring.transform(
+                                _controller.value,
+                                widget.animationDuration,
+                              )
+                            : _progress.value))
+                  .clamp(0.0, 1.0);
         final height = widget.height * (_minimized ? 0.55 : 1);
         final isMaterialNotch = widget.shape == TabBarShape.materialNotch;
         final isCurvedNotch = widget.shape == TabBarShape.curvedNotch;
         final isNotch = isMaterialNotch || isCurvedNotch;
-        final isConvexBump = widget.shape == TabBarShape.convexFixed ||
+        final isConvexBump =
+            widget.shape == TabBarShape.convexFixed ||
             widget.shape == TabBarShape.convexReact ||
             widget.shape == TabBarShape.bubble;
         final isSDivider = widget.shape == TabBarShape.sDivider;
         final isSCurve = widget.shape == TabBarShape.sCurve;
-        final isVertical = widget.position == TabBarPosition.left ||
+        final isVertical =
+            widget.position == TabBarPosition.left ||
             widget.position == TabBarPosition.right;
+        final reversed =
+            !isVertical && Directionality.of(context) == TextDirection.rtl;
         final fab = widget.fabConfig;
         final supportsFab = widget.shape.supportsDockedFab && !isVertical;
         final showFab = supportsFab && fab.showFab;
         final dockedCenter = showFab && fab.location.isDockedCenter;
         final fabSize = fab.size;
         final notchMargin = fab.margin;
-        final fabAppear =
-            (showFab && !reduce) ? _fabAppear.value : 1.0;
+        final fabAppear = (showFab && !reduce) ? _fabAppear.value : 1.0;
         final bumpPad = isConvexBump ? 22.0 : (isCurvedNotch ? 8.0 : 0.0);
         final extraTop = showFab && fab.location.isOutsideTop
             ? fabSize + fab.margin
             : 0.0;
-        final convexBodyPad =
-            dockedCenter ? math.max(fabSize / 2, bumpPad) : bumpPad;
-        final topPad = extraTop +
+        final convexBodyPad = dockedCenter
+            ? math.max(fabSize / 2, bumpPad)
+            : bumpPad;
+        final topPad =
+            extraTop +
             (dockedCenter ? math.max(fabSize / 2, bumpPad) : bumpPad);
-        final leftInset =
-            showFab && fab.location == TabFabLocation.left ? fabSize + fab.margin : 0.0;
-        final rightInset =
-            showFab && fab.location == TabFabLocation.right ? fabSize + fab.margin : 0.0;
+        final leftInset = showFab && fab.location == TabFabLocation.left
+            ? fabSize + fab.margin
+            : 0.0;
+        final rightInset = showFab && fab.location == TabFabLocation.right
+            ? fabSize + fab.margin
+            : 0.0;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -351,17 +432,20 @@ class _TabAnimationProState extends State<TabAnimationPro>
             final isContainer = widget.shape == TabBarShape.container;
             final resolvedTabExtent = isContainer
                 ? (widget.tabExtent ??
-                    math.min(50.0, height * 0.48).clamp(36.0, 56.0))
+                          math.min(50.0, height * 0.48).clamp(36.0, 56.0))
+                      .clamp(0.0, height)
                 : 0.0;
             final resolvedTabCorner =
                 widget.tabCornerRadius ?? widget.cornerRadius;
 
-            final barW = isVertical ? maxH : (maxW - leftInset - rightInset);
+            final barW = isVertical
+                ? maxH
+                : math.max(0.0, maxW - leftInset - rightInset);
             final barSize = isVertical
                 ? Size(maxH, height)
                 : (isConvexBump
-                    ? Size(barW, height + convexBodyPad)
-                    : Size(barW, height));
+                      ? Size(barW, height + convexBodyPad)
+                      : Size(barW, height));
 
             late Path path;
             List<Path>? pianoKeys;
@@ -370,12 +454,20 @@ class _TabAnimationProState extends State<TabAnimationPro>
             final slots = TabSlotGeometry.of(
               width: barSize.width,
               itemCount: itemCount,
-              location: dockedCenter ? TabFabLocation.center : TabFabLocation.none,
+              location: dockedCenter
+                  ? TabFabLocation.center
+                  : TabFabLocation.none,
               gapWidth: fab.gapWidth,
+              reversed: reversed,
             );
-            final bumpFrom = slots.centerX(_previousIndex);
-            final bumpTo = slots.centerX(_index);
-            final curvedNotchCenter = lerpDouble(bumpFrom, bumpTo, p)!;
+            final from = slots.centerX(_previousIndex);
+            final to = slots.centerX(_index);
+            final curvedNotchCenter = lerpDouble(from, to, p)!;
+            final pathReversed = isVertical || reversed;
+            final pathFrom = pathReversed
+                ? itemCount - 1 - _previousIndex
+                : _previousIndex;
+            final pathTo = pathReversed ? itemCount - 1 - _index : _index;
 
             if (isContainer) {
               // Horizontal path is rotated -90° for side bars: x=0 lands at the
@@ -383,11 +475,6 @@ class _TabAnimationProState extends State<TabAnimationPro>
               // protrusion onto the matching visual slot.
               final count = itemCount;
               final itemW = barSize.width / count;
-              final pathFrom = isVertical
-                  ? (count - 1 - _previousIndex)
-                  : _previousIndex;
-              final pathTo =
-                  isVertical ? (count - 1 - _index) : _index;
               final fromStart = pathFrom * itemW;
               final toStart = pathTo * itemW;
               final start = lerpDouble(fromStart, toStart, p)!;
@@ -404,18 +491,19 @@ class _TabAnimationProState extends State<TabAnimationPro>
             } else if (isSCurve || isSDivider) {
               pianoKeys = buildPianoKeyPaths(
                 size: barSize,
-                selectedIndex: _index,
-                previousIndex: _previousIndex,
+                selectedIndex: pathTo,
+                previousIndex: pathFrom,
                 itemCount: widget.items.length,
                 progress: p,
               );
               pianoSeams = buildPianoSeamPaths(
                 size: barSize,
                 itemCount: widget.items.length,
-                selectedIndex: _index,
-                previousIndex: _previousIndex,
+                selectedIndex: pathTo,
+                previousIndex: pathFrom,
                 progress: p,
               );
+              if (pathReversed) pianoKeys = pianoKeys.reversed.toList();
               path = Path();
               for (final key in pianoKeys) {
                 path.addPath(key, Offset.zero);
@@ -427,7 +515,9 @@ class _TabAnimationProState extends State<TabAnimationPro>
               path = buildTabBarPath(
                 shape: widget.shape,
                 size: barSize,
-                selectedIndex: _index,
+                selectedIndex: widget.shape == TabBarShape.custom
+                    ? _index
+                    : pathTo,
                 itemCount: widget.items.length,
                 progress: barMotion == TabBarMotion.none ? 1 : p,
                 cornerRadius: widget.cornerRadius,
@@ -437,10 +527,12 @@ class _TabAnimationProState extends State<TabAnimationPro>
                 tabExtent: resolvedTabExtent,
                 tabCornerRadius: resolvedTabCorner,
                 bumpCenterX: isCurvedNotch
-                    ? curvedNotchCenter
+                    ? (isVertical
+                          ? barSize.width - curvedNotchCenter
+                          : curvedNotchCenter)
                     : (isMaterialNotch
-                        ? fabCenterX
-                        : slots.centerX(_index)),
+                          ? fabCenterX
+                          : (isVertical ? barSize.width - to : to)),
                 customBuilder: widget.customBarPath,
                 notchSmoothness: fab.smoothness,
                 leftCornerRadius: widget.cornerRadius,
@@ -500,8 +592,6 @@ class _TabAnimationProState extends State<TabAnimationPro>
               }
             }
 
-            final from = slots.centerX(_previousIndex);
-            final to = slots.centerX(_index);
             // Docked center FAB; curvedNotch disc still follows the tab.
             final fabMain = dockedCenter
                 ? slots.fabCenterX
@@ -540,9 +630,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
 
             final tabItemAnimation = isWaterDrop
                 ? TabItemAnimation.none
-                : (isCurvedNotch
-                    ? TabItemAnimation.colorTween
-                    : effectiveItem);
+                : (isCurvedNotch ? TabItemAnimation.colorTween : effectiveItem);
             // Feedback (e.g. starTwinkle) stays independent of water-drop mode.
             final tabFeedback = preset.feedback;
 
@@ -555,7 +643,6 @@ class _TabAnimationProState extends State<TabAnimationPro>
                 progress: p,
                 selected: i == _index,
                 activeColor: active,
-                selectedIconColor: null,
                 inactiveColor: inactive,
                 itemAnimation: tabItemAnimation,
                 enable3D: widget.enable3D && !reduce && !isWaterDrop,
@@ -564,7 +651,6 @@ class _TabAnimationProState extends State<TabAnimationPro>
                 showLabels: widget.showLabels,
                 reduceMotion: reduce,
                 feedback: tabFeedback,
-                sparkleProgress: sparkleT,
                 waterDropMode: isWaterDrop,
                 labelActiveColor: c.labelActive,
                 labelInactiveColor: c.labelInactive,
@@ -590,30 +676,21 @@ class _TabAnimationProState extends State<TabAnimationPro>
                     ),
                 ],
               );
-            } else if (isVertical) {
-              tabs = Column(
-                children: [
-                  for (var i = 0; i < widget.items.length; i++)
-                    Expanded(child: buildSlot(i)),
-                ],
-              );
-            } else if (dockedCenter) {
-              final gapW = fab.gapWidth;
-              final n = widget.items.length;
-              tabs = Row(
-                children: [
-                  for (var i = 0; i < n; i++) ...[
-                    if (i == n ~/ 2)
-                      SizedBox(width: gapW),
-                    Expanded(child: buildSlot(i)),
-                  ],
-                ],
-              );
             } else {
-              tabs = Row(
+              tabs = Stack(
                 children: [
                   for (var i = 0; i < widget.items.length; i++)
-                    Expanded(child: buildSlot(i)),
+                    Positioned(
+                      left: isVertical ? 0 : slots.left(i),
+                      top: isVertical ? slots.left(i) : 0,
+                      width: isVertical
+                          ? (isContainer ? resolvedTabExtent : height)
+                          : slots.widthAt(i),
+                      height: isVertical
+                          ? slots.widthAt(i)
+                          : (isContainer ? resolvedTabExtent : height),
+                      child: buildSlot(i),
+                    ),
                 ],
               );
             }
@@ -638,6 +715,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
                               seamColor: isSDivider ? c.divider : c.pianoSeam,
                               drawSeamsOnly: false,
                               elevation: widget.elevation.clamp(0, 8),
+                              shadowColor: c.shadow,
                             ),
                             child: const SizedBox.expand(),
                           )
@@ -697,10 +775,10 @@ class _TabAnimationProState extends State<TabAnimationPro>
                     // Never set left+right+width or top+bottom+height together.
                     left: isVertical
                         ? (isContainer
-                            ? (widget.position == TabBarPosition.right
-                                ? height - resolvedTabExtent
-                                : 0.0)
-                            : topPad)
+                              ? (widget.position == TabBarPosition.right
+                                    ? height - resolvedTabExtent
+                                    : 0.0)
+                              : topPad)
                         : leftInset,
                     top: isVertical
                         ? 0
@@ -711,7 +789,6 @@ class _TabAnimationProState extends State<TabAnimationPro>
                     height: isVertical
                         ? null
                         : (isContainer ? resolvedTabExtent : height),
-                    right: isVertical ? null : null,
                     bottom: isVertical ? 0 : null,
                     child: Stack(
                       clipBehavior: Clip.none,
@@ -732,19 +809,22 @@ class _TabAnimationProState extends State<TabAnimationPro>
                               color: indicator,
                               itemShape: widget.itemShape,
                               slots: slots,
-                              clipPath: dripClipPath,
+                              clipPath: isVertical ? null : dripClipPath,
+                              axis: isVertical
+                                  ? Axis.vertical
+                                  : Axis.horizontal,
                             ),
                           ),
                         tabs,
                       ],
                     ),
                   ),
-                  if (isWaterDrop && !isVertical)
+                  if (isWaterDrop)
                     Positioned(
-                      left: leftInset,
-                      top: topPad,
-                      width: barW,
-                      height: height,
+                      left: isVertical ? 0 : leftInset,
+                      top: isVertical ? 0 : topPad,
+                      width: isVertical ? height : barW,
+                      height: isVertical ? maxH : height,
                       child: IgnorePointer(
                         child: CustomPaint(
                           painter: WaterDropNavPainter(
@@ -754,7 +834,8 @@ class _TabAnimationProState extends State<TabAnimationPro>
                             progress: p,
                             color: indicator,
                             slots: slots,
-                            clipPath: dripClipPath,
+                            clipPath: isVertical ? null : dripClipPath,
+                            axis: isVertical ? Axis.vertical : Axis.horizontal,
                           ),
                         ),
                       ),
@@ -767,17 +848,29 @@ class _TabAnimationProState extends State<TabAnimationPro>
       },
     );
 
-    if (widget.enableDragSelect) {
+    if (widget.enableDragSelect && widget.items.isNotEmpty) {
+      final vertical =
+          widget.position == TabBarPosition.left ||
+          widget.position == TabBarPosition.right;
+      void onDragEnd(DragEndDetails details) {
+        var velocity = details.primaryVelocity ?? 0;
+        if (!vertical && Directionality.of(context) == TextDirection.rtl) {
+          velocity = -velocity;
+        }
+        if (velocity.abs() > 200) {
+          _onTap(
+            (_index + (velocity < 0 ? 1 : -1)).clamp(
+              0,
+              widget.items.length - 1,
+            ),
+          );
+        }
+      }
+
       bar = GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onHorizontalDragEnd: (details) {
-          final vx = details.primaryVelocity ?? 0;
-          if (vx < -200) {
-            _onTap((_index + 1).clamp(0, widget.items.length - 1));
-          } else if (vx > 200) {
-            _onTap((_index - 1).clamp(0, widget.items.length - 1));
-          }
-        },
+        onHorizontalDragEnd: vertical ? null : onDragEnd,
+        onVerticalDragEnd: vertical ? onDragEnd : null,
         child: bar,
       );
     }
@@ -786,9 +879,9 @@ class _TabAnimationProState extends State<TabAnimationPro>
       bar = NotificationListener<ScrollNotification>(
         onNotification: (n) {
           if (n is ScrollUpdateNotification) {
-            final dy = n.scrollDelta ?? 0;
-            if (dy > 2 && !_minimized) setState(() => _minimized = true);
-            if (dy < -2 && _minimized) setState(() => _minimized = false);
+            if (widget.scrollController == null) {
+              _handleScrollDelta(n.scrollDelta ?? 0);
+            }
           }
           return false;
         },
@@ -809,10 +902,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
         child: bar,
       );
     }
-    return Material(
-      type: MaterialType.transparency,
-      child: bar,
-    );
+    return Material(type: MaterialType.transparency, child: bar);
   }
 }
 
@@ -915,10 +1005,7 @@ class _InsetStripPainter extends CustomPainter {
 /// Hit-tests a piano key using its outline [path], and centers the child
 /// on the path bounds so icons line up with the interlocking S keys.
 class _PianoKeyHitTarget extends StatelessWidget {
-  const _PianoKeyHitTarget({
-    required this.path,
-    required this.child,
-  });
+  const _PianoKeyHitTarget({required this.path, required this.child});
 
   final Path path;
   final Widget child;
@@ -988,7 +1075,6 @@ class _TabSlot extends StatelessWidget {
     required this.progress,
     required this.selected,
     required this.activeColor,
-    this.selectedIconColor,
     required this.inactiveColor,
     required this.itemAnimation,
     required this.enable3D,
@@ -997,7 +1083,6 @@ class _TabSlot extends StatelessWidget {
     required this.showLabels,
     required this.reduceMotion,
     required this.feedback,
-    this.sparkleProgress = 0,
     this.waterDropMode = false,
     required this.labelActiveColor,
     required this.labelInactiveColor,
@@ -1014,8 +1099,6 @@ class _TabSlot extends StatelessWidget {
   final double progress;
   final bool selected;
   final Color activeColor;
-  /// When set, overrides the selected icon tint (e.g. white on curvedNotch disc).
-  final Color? selectedIconColor;
   final Color inactiveColor;
   final TabItemAnimation itemAnimation;
   final bool enable3D;
@@ -1024,7 +1107,6 @@ class _TabSlot extends StatelessWidget {
   final bool showLabels;
   final bool reduceMotion;
   final TabFeedbackAnimation feedback;
-  final double sparkleProgress;
   final bool waterDropMode;
   final Color labelActiveColor;
   final Color labelInactiveColor;
@@ -1041,9 +1123,11 @@ class _TabSlot extends StatelessWidget {
       reduceMotion: reduceMotion,
       animation: selected ? progress : 0,
     );
-    final tint = selected && selectedIconColor != null
-        ? selectedIconColor!
-        : Color.lerp(inactiveColor, activeColor, selected ? progress : 0.15)!;
+    final tint = Color.lerp(
+      inactiveColor,
+      activeColor,
+      selected ? progress : 0.15,
+    )!;
     final graphic = (selected ? item.activeIcon : null) ?? item.icon;
     final inactiveGraphic = item.icon;
     final activeGraphic = item.activeIcon ?? item.icon;
@@ -1053,9 +1137,30 @@ class _TabSlot extends StatelessWidget {
       icon = WaterDropIconReveal(
         progress: progress,
         selected: selected,
-        inactiveIcon: inactiveGraphic.build(context, state, tint: inactiveColor),
+        inactiveIcon: inactiveGraphic.build(
+          context,
+          state,
+          tint: inactiveColor,
+        ),
         activeIcon: activeGraphic.build(context, state, tint: activeColor),
         iconSize: inactiveGraphic.size,
+      );
+    } else if (itemAnimation == TabItemAnimation.iconMorph && !reduceMotion) {
+      final entering = index == selectedIndex;
+      final leaving = index == previousIndex && previousIndex != selectedIndex;
+      final mix = entering ? progress : (leaving ? 1 - progress : 0.0);
+      icon = Stack(
+        alignment: Alignment.center,
+        children: [
+          Opacity(
+            opacity: 1 - mix,
+            child: inactiveGraphic.build(context, state, tint: inactiveColor),
+          ),
+          Opacity(
+            opacity: mix,
+            child: activeGraphic.build(context, state, tint: activeColor),
+          ),
+        ],
       );
     } else {
       icon = graphic.build(context, state, tint: tint);
@@ -1080,9 +1185,7 @@ class _TabSlot extends StatelessWidget {
     }
 
     // Avoid stacking 2D flip/rotate/scale on top of 3D (causes crush/warp).
-    final motion = enable3D
-        ? TabItemAnimation.colorTween
-        : itemAnimation;
+    final motion = enable3D ? TabItemAnimation.colorTween : itemAnimation;
 
     Widget body = TabItemMotion(
       animation: waterDropMode ? TabItemAnimation.none : motion,
@@ -1097,16 +1200,18 @@ class _TabSlot extends StatelessWidget {
     );
 
     // Sparkles wrap icon + label so stars/moons twinkle over both.
-    if (feedback == TabFeedbackAnimation.starTwinkle) {
+    if (!reduceMotion && feedback == TabFeedbackAnimation.starTwinkle) {
       body = StarTwinkleOverlay(
-        progress: sparkleProgress,
+        progress: 0,
+        animate: true,
         active: selected,
         color: starColor,
         child: body,
       );
-    } else if (feedback == TabFeedbackAnimation.moonTwinkle) {
+    } else if (!reduceMotion && feedback == TabFeedbackAnimation.moonTwinkle) {
       body = MoonTwinkleOverlay(
-        progress: sparkleProgress,
+        progress: 0,
+        animate: true,
         active: selected,
         color: starColor,
         child: body,
@@ -1132,14 +1237,18 @@ class _TabSlot extends StatelessWidget {
       children: [
         body,
         if (item.badge != null && item.badge!.isVisible)
-          Positioned(
-            right: 12 + item.badge!.offset.dx,
-            top: 6 + item.badge!.offset.dy,
-            child: Transform.scale(
-              scale: feedback == TabFeedbackAnimation.badgePop && selected
-                  ? 0.85 + 0.2 * progress
-                  : 1,
-              child: item.badge!.build(context, state),
+          Positioned.fill(
+            child: Align(
+              alignment: item.badge!.alignment,
+              child: Transform.translate(
+                offset: item.badge!.offset,
+                child: Transform.scale(
+                  scale: feedback == TabFeedbackAnimation.badgePop && selected
+                      ? 0.85 + 0.2 * progress
+                      : 1,
+                  child: item.badge!.build(context, state),
+                ),
+              ),
             ),
           ),
       ],
@@ -1156,8 +1265,13 @@ class _TabSlot extends StatelessWidget {
       highlightColor: Colors.transparent,
       child: SizedBox.expand(
         child: waterDropMode
-            ? Align(alignment: Alignment.bottomCenter, child: stack)
-            : Center(child: stack),
+            ? Align(
+                alignment: Alignment.bottomCenter,
+                child: FittedBox(fit: BoxFit.scaleDown, child: stack),
+              )
+            : Center(
+                child: FittedBox(fit: BoxFit.scaleDown, child: stack),
+              ),
       ),
     );
 

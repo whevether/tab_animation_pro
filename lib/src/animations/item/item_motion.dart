@@ -31,18 +31,25 @@ class TabItemMotion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = selected ? progress : (1 - progress).clamp(0.0, 1.0);
+    final t = (selected ? progress : 1 - progress).clamp(0.0, 1.0);
     Widget content = child;
 
     switch (animation) {
       case TabItemAnimation.none:
       case TabItemAnimation.colorTween:
       case TabItemAnimation.custom:
+      case TabItemAnimation.iconMorph:
         break;
       case TabItemAnimation.fade:
-        content = Opacity(opacity: selected ? (0.55 + 0.45 * t) : 0.55, child: content);
+        content = Opacity(
+          opacity: selected ? (0.55 + 0.45 * t) : 0.55,
+          child: content,
+        );
       case TabItemAnimation.scale:
-        content = Transform.scale(scale: selected ? (0.9 + 0.15 * t) : 0.9, child: content);
+        content = Transform.scale(
+          scale: selected ? (0.9 + 0.15 * t) : 0.9,
+          child: content,
+        );
       case TabItemAnimation.bounce:
         final s = selected ? (1 + 0.18 * math.sin(t * math.pi)) : 0.92;
         content = Transform.scale(scale: s, child: content);
@@ -61,12 +68,6 @@ class TabItemMotion extends StatelessWidget {
       case TabItemAnimation.flashy:
         content = Transform.translate(
           offset: Offset(0, selected ? -6.0 * t : 0),
-          child: content,
-        );
-      case TabItemAnimation.iconMorph:
-        content = AnimatedOpacity(
-          opacity: 1,
-          duration: const Duration(milliseconds: 200),
           child: content,
         );
       case TabItemAnimation.slidingClipped:
@@ -136,9 +137,6 @@ class TabItemMotion extends StatelessWidget {
     if (animation != TabItemAnimation.rotate) return child;
     // Selected: 0 → π → 0 (full 180° then settle). Unselected stays upright.
     final angle = selected ? math.sin(t * math.pi) * math.pi : 0.0;
-    return Transform.rotate(
-      angle: angle,
-      child: child,
-    );
+    return Transform.rotate(angle: angle, child: child);
   }
 }

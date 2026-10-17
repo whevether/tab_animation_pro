@@ -1,6 +1,9 @@
+import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:material_ui/material_ui.dart';
+
+import '../timing.dart';
 
 import '../../layout/tab_slot_geometry.dart';
 
@@ -37,11 +40,6 @@ Path buildWaterDropDripPath(Size size) {
   return path;
 }
 
-double _interval(double t, double begin, double end) {
-  if (end <= begin) return t >= end ? 1 : 0;
-  return ((t - begin) / (end - begin)).clamp(0.0, 1.0);
-}
-
 /// Running + falling drop matching water_drop_nav_bar `BuildRunningDrop`.
 ///
 /// [progress] must be the raw 0–1 controller value (linear, ~800ms).
@@ -54,6 +52,7 @@ class WaterDropNavPainter extends CustomPainter {
     required this.color,
     this.slots,
     this.clipPath,
+    this.axis = Axis.horizontal,
   });
 
   final int selectedIndex;
@@ -66,15 +65,27 @@ class WaterDropNavPainter extends CustomPainter {
   /// Bar outline in this painter's coordinates. Clips the flat-top drip so it
   /// cannot spill into a docked-FAB notch (soft/smooth/verySmooth shoulders).
   final Path? clipPath;
+  final Axis axis;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final geometry = slots ??
-        TabSlotGeometry.of(width: size.width, itemCount: itemCount);
-    final itemW = geometry.slotWidth;
+    canvas.save();
+    if (clipPath != null) canvas.clipPath(clipPath!);
+    if (axis == Axis.vertical) {
+      canvas.translate(size.width, 0);
+      canvas.rotate(math.pi / 2);
+      size = Size(size.height, size.width);
+    }
+    final geometry =
+        slots ?? TabSlotGeometry.of(width: size.width, itemCount: itemCount);
+    final itemW = lerpDouble(
+      geometry.widthAt(previousIndex),
+      geometry.widthAt(selectedIndex),
+      intervalProgress(progress, 0, 0.35),
+    )!;
     final t = progress.clamp(0.0, 1.0);
 
-    final slide = Curves.linear.transform(_interval(t, 0.0, 0.35));
+    final slide = Curves.linear.transform(intervalProgress(t, 0.0, 0.35));
     final left = lerpDouble(
       geometry.left(previousIndex),
       geometry.left(selectedIndex),
@@ -84,18 +95,13 @@ class WaterDropNavPainter extends CustomPainter {
     late final double dripW;
     late final double dripH;
     if (t <= 0.45) {
-      final m = _interval(t, 0.3, 0.45);
+      final m = intervalProgress(t, 0.3, 0.45);
       dripW = lerpDouble(72, 56, m)!;
       dripH = lerpDouble(16, 24, m)!;
     } else {
-      final m = _interval(t, 0.45, 0.60);
+      final m = intervalProgress(t, 0.45, 0.60);
       dripW = lerpDouble(56, 72, m)!;
       dripH = lerpDouble(24, 16, m)!;
-    }
-
-    canvas.save();
-    if (clipPath != null) {
-      canvas.clipPath(clipPath!);
     }
 
     // Hanging drip stays on the selected tab at rest (progress == 1).
@@ -109,13 +115,9 @@ class WaterDropNavPainter extends CustomPainter {
 
     // Falling bead: 0.40–0.70, disappears after 0.65 (lands on icon).
     if (t >= 0.40 && t <= 0.65) {
-      final fall = _interval(t, 0.40, 0.70);
+      final fall = intervalProgress(t, 0.40, 0.70);
       final y = lerpDouble(5.0, 40.0, fall)!;
-      canvas.drawCircle(
-        Offset(left + itemW / 2, y),
-        5,
-        Paint()..color = color,
-      );
+      canvas.drawCircle(Offset(left + itemW / 2, y), 5, Paint()..color = color);
     }
     canvas.restore();
   }
@@ -128,6 +130,7 @@ class WaterDropNavPainter extends CustomPainter {
         oldDelegate.color != color ||
         oldDelegate.itemCount != itemCount ||
         oldDelegate.slots != slots ||
-        oldDelegate.clipPath != clipPath;
+        oldDelegate.clipPath != clipPath ||
+        oldDelegate.axis != axis;
   }
 }

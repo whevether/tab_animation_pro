@@ -2,6 +2,15 @@
 
 [中文](CHANGELOG-ZH.md)
 
+## 0.2.4
+
+- Update material_ui to ^1.7.0 and Gradle to 9.8.1; correct AGP to the published stable 9.4.1.
+- Fix selection synchronization, changing item counts, narrow notches, RTL and vertical indicators, odd-count FAB layout, curve updates, and Reduce Motion.
+- Honor badge alignment and size; implement icon cross fades, liquid spring timing, and piano elevation.
+- Add optional scrollController support for minimizeOnScroll and isolate particle animation repainting.
+- Include the Cupertino icon font in the example to eliminate the Web font warning.
+- Consolidate timing, particle, and seam rendering; retain public APIs and add regression tests.
+
 ## 0.2.3
 
 - Bump `material_ui` to `^1.6.0`

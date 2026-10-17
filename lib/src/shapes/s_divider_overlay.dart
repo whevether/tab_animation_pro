@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../shapes/bar_shapes.dart';
+import 'bar_shapes.dart';
+import 'piano_keys_painter.dart';
 
 /// Paints S-curve divider strokes between tab items ([TabBarShape.sDivider]).
 class SDividerOverlay extends StatelessWidget {
@@ -51,14 +52,7 @@ class _SDividerPainter extends CustomPainter {
       itemCount: itemCount,
       bend: bend,
     );
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-    for (final path in paths) {
-      canvas.drawPath(path, paint);
-    }
+    paintTabSeams(canvas, paths, color: color, strokeWidth: strokeWidth);
   }
 
   @override

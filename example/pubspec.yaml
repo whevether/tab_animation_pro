@@ -9,7 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  material_ui: ^1.6.0
+  material_ui: ^1.7.0
+  cupertino_icons: ^2.0.0
   tab_animation_pro:
     path: ../
   lottie: ^3.6.1

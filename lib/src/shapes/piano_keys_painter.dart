@@ -14,6 +14,7 @@ class PianoKeysPainter extends CustomPainter {
     this.seams = const [],
     this.drawSeamsOnly = false,
     this.elevation = 2,
+    this.shadowColor = Colors.black26,
   });
 
   final List<Path> keys;
@@ -26,10 +27,18 @@ class PianoKeysPainter extends CustomPainter {
   final List<Path> seams;
   final bool drawSeamsOnly;
   final double elevation;
+  final Color shadowColor;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (!drawSeamsOnly) {
+      if (elevation > 0) {
+        final outline = Path();
+        for (final key in keys) {
+          outline.addPath(key, Offset.zero);
+        }
+        canvas.drawShadow(outline, shadowColor, elevation, true);
+      }
       for (var i = 0; i < keys.length; i++) {
         final path = keys[i];
         var amount = 0.0;
@@ -49,21 +58,12 @@ class PianoKeysPainter extends CustomPainter {
       }
     }
 
-    final seamPaint = Paint()
-      ..color = seamColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = drawSeamsOnly ? 1.6 : 0.7
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    if (seams.isNotEmpty) {
-      for (final seam in seams) {
-        canvas.drawPath(seam, seamPaint);
-      }
-    } else {
-      for (final path in keys) {
-        canvas.drawPath(path, seamPaint);
-      }
-    }
+    paintTabSeams(
+      canvas,
+      seams.isNotEmpty ? seams : keys,
+      color: seamColor,
+      strokeWidth: drawSeamsOnly ? 1.6 : 0.7,
+    );
   }
 
   @override
@@ -77,6 +77,25 @@ class PianoKeysPainter extends CustomPainter {
         oldDelegate.pressedColor != pressedColor ||
         oldDelegate.seamColor != seamColor ||
         oldDelegate.drawSeamsOnly != drawSeamsOnly ||
-        oldDelegate.elevation != elevation;
+        oldDelegate.elevation != elevation ||
+        oldDelegate.shadowColor != shadowColor;
+  }
+}
+
+/// Shared seam rendering for the bar and the standalone divider overlay.
+void paintTabSeams(
+  Canvas canvas,
+  Iterable<Path> paths, {
+  required Color color,
+  required double strokeWidth,
+}) {
+  final paint = Paint()
+    ..color = color
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = strokeWidth
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round;
+  for (final path in paths) {
+    canvas.drawPath(path, paint);
   }
 }

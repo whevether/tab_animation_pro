@@ -31,8 +31,8 @@ Flutter 多外形 Tab 栏：规则/不规则形状、分层动画、可选 3D，
 
 ```yaml
 dependencies:
-  tab_animation_pro: ^0.2.3
-  material_ui: ^1.6.0
+  tab_animation_pro: ^0.2.4
+  material_ui: ^1.7.0
 ```
 
 ```bash
@@ -123,8 +123,8 @@ class _HomePageState extends State<HomePage> {
 
 | 参数 | 类型 | 默认 | 说明 |
 |------|------|------|------|
-| `items` | `List<TabItem>` | 必填 | Tab 列表。建议 2–5 个；`materialNotch` 建议偶数。 |
-| `currentIndex` | `int` | `0` | 当前选中下标。传入 `controller` 时，点击走 `controller.jumpTo`，仍应用 `currentIndex` 做初始值。 |
+| `items` | `List<TabItem>` | 必填 | Tab 列表，建议 2–5 个。空列表不显示；奇数项也保持 center FAB 居中。 |
+| `currentIndex` | `int` | `0` | 当前选中下标；传入 `controller` 时由其索引优先控制。越界索引在栏内限制到有效范围。 |
 | `onTap` | `ValueChanged<int>?` | `null` | 点击回调。水滴动画播放中会忽略再次点击。 |
 | `controller` | `TabAnimationController?` | `null` | 编程切 Tab。非空时点击不再用 `setState(currentIndex)`，而是 `controller.jumpTo`。 |
 | `shape` | `TabBarShape` | `fixed` | 整栏轮廓。 |
@@ -135,12 +135,13 @@ class _HomePageState extends State<HomePage> {
 | `itemAnimation` | `TabItemAnimation?` | `null` | 覆盖预设的项动画。`enable3D` 时强制 `colorTween`，避免 2D/3D 叠变换。水滴模式强制 `none`（配合图标揭示）。 |
 | `feedbackAnimation` | `TabFeedbackAnimation?` | `null` | 覆盖预设的点击反馈。与水滴独立，可同时开 `starTwinkle` / `moonTwinkle`。 |
 | `barMotion` | `TabBarMotion?` | `null` | 覆盖预设的栏体路径运动。 |
+| `scrollController` | `ScrollController?` | `null` | 供 `minimizeOnScroll` 监听的滚动视图控制器，由宿主持有和释放。 |
 | `enable3D` | `bool` | `false` | 对每项施加透视变换。水滴模式自动关闭。 |
 | `threeDStyle` | `Tab3DStyle` | `flip` | 3D 样式。 |
 | `perspective` | `double` | `0.0008` | 透视强度，内部夹到 `0.0002–0.0015`。 |
-| `spring` | `TabSpringConfig` | stiffness 120 / damping 14 / mass 1 | 预留给过冲/液体类过渡。 |
+| `spring` | `TabSpringConfig` | stiffness 120 / damping 14 / mass 1 | 控制 `liquidBlob` / `liquidMorph` / `blobFollow` 的弹簧过渡；切换结束时精确归位。 |
 | `respectReduceMotion` | `bool` | `true` | 为 true 时遵循 `MediaQuery.disableAnimations`：指示器改 `none`，项改 `fade`，栏体运动改 `none`，关掉 3D。 |
-| `enableDragSelect` | `bool` | `false` | 在栏上水平快滑（速度绝对值 > 200）切到相邻 Tab。 |
+| `enableDragSelect` | `bool` | `false` | 沿栏主轴快滑（速度绝对值 > 200）切到相邻 Tab；支持 RTL 和侧栏。 |
 | `position` | `TabBarPosition` | `bottom` | 栏所在边，影响路径旋转与 SafeArea。 |
 | `height` | `double` | `64` | 栏厚。侧栏时这是横截面厚度。`minimizeOnScroll` 收起时缩到 55%。 |
 | `backgroundColor` | `Color?` | 主题 | 快捷栏底色，覆盖 `colors.background`。 |
@@ -310,7 +311,7 @@ controller.previous(itemCount: items.length);
 | 点 Tab | 只播该项 `itemAnimation`，FAB 不跟着颤 |
 
 - FAB 默认直径 56，缺口边距 8；`center` 时圆心在栏顶边（一半露出）
-- 只有 `center` 会拆开 Tab（空隙在中间）。**center 建议偶数个** Tab
+- 只有 `center` 会拆开 Tab（空隙在中间）。奇数项时两侧标签分别均分可用空间，FAB 仍在几何中心
 - 栏外四位置不挖缺口、不拆 Tab
 - 挖空露出的是 Scaffold 背景，需与栏底有对比
 - 圆角建议 `cornerRadius: 32`
@@ -355,7 +356,7 @@ itemAnimation: TabItemAnimation.colorTween,
 - 时长 **800ms** + **`Curves.linear`**
 - 动画过程中忽略点击
 - 栏底色与水滴色（`indicatorColor`）必须不同，否则看不出垂滴
-- 水平栏才画水滴；侧栏仍显示图标文字，不画滴
+- 侧栏水滴沿竖向主轴绘制；减少动画开启时不播放水滴和粒子过渡
 - 可用 `fabConfig` 加 FAB；仅 `center` 会让 Tab 让位并挖缺口，水滴落点跟槽位对齐；栏外位置不拆 Tab
 
 ```dart
@@ -561,7 +562,18 @@ customBarPath: (size, selectedIndex, itemCount, progress) {
 | `blobFollow` | 液态斑跟随 |
 | `minimizeOnScroll` | 收到向上滚动通知时栏高缩到 55%，向下滚恢复 |
 
-`minimizeOnScroll` 的 `NotificationListener` 包在栏自己身上。放在 `Scaffold.bottomNavigationBar` 时**收不到** body 里 ListView 的通知。若要滚动收起，把栏放到滚动视图的祖先（例如 `body` 里 `Column`/`Stack`），或自己听滚动再改 `height`。
+将同一个 `ScrollController` 传给滚动视图和栏的 `scrollController`，即可在 `Scaffold.bottomNavigationBar` 中滚动收起；控制器由宿主释放。不传时只监听栏子树冒泡的滚动通知。减少动画开启时保持完整栏高。
+
+```dart
+final scroll = ScrollController(); // 在宿主 State.dispose 中释放
+// body: ListView(controller: scroll, ...),
+// bottomNavigationBar:
+TabAnimationPro(
+  items: items,
+  barMotion: TabBarMotion.minimizeOnScroll,
+  scrollController: scroll,
+);
+```
 
 ## 3D
 
@@ -698,7 +710,7 @@ threeDStyle: Tab3DStyle.coverflow,
 
 ## 手势、安全区、减弱动效
 
-- **`enableDragSelect`**：在栏上水平快滑切相邻项（不循环到尽头之外）。
+- **`enableDragSelect`**：沿栏主轴快滑切相邻项，支持 RTL 和侧栏（不循环到尽头之外）。
 - **`safeArea`**：只垫 `position` 对应那一边，避免底栏再垫 top。仅系统 inset 条带用栏背景色填满，保留 FAB 缺口镂空。
 - **`respectReduceMotion`**：系统关闭动画时，指示器/3D/栏体运动关掉，项改为 fade。
 - **`margin`**：整栏外边距，加在 SafeArea 内侧。
@@ -738,3 +750,5 @@ flutter run
 | Top / RTL / Reduce motion | 顶栏、RTL、减弱动效 |
 
 Android release 使用 `example/jks/` 测试证书（见 `example/jks/README.md`）。Gradle 读取 `example/android/key.properties`。
+
+`TabSlotGeometry.slotWidth` 为平均宽度；奇数标签搭配 center FAB 时，请用 `widthAt(index)` 获取各槽宽度。粒子动画独立重绘，徽标支持任意 `alignment` 与标准坐标方向的 `offset`。

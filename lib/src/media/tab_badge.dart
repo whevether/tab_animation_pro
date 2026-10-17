@@ -117,13 +117,11 @@ class TabBadge {
   }
 
   Widget build(BuildContext context, TabMediaState state) {
-    if (builder != null) {
-      return builder!(context, state);
-    }
-    if (child != null) {
+    final custom = builder?.call(context, state) ?? child;
+    if (custom != null) {
       return size == null
-          ? child!
-          : SizedBox(width: size!.width, height: size!.height, child: child);
+          ? custom
+          : SizedBox(width: size!.width, height: size!.height, child: custom);
     }
 
     final bg = color ?? const Color(0xFFE53935);
@@ -138,7 +136,8 @@ class TabBadge {
       );
     }
 
-    final label = text ?? (count == null ? null : (count! > 99 ? '99+' : '$count'));
+    final label =
+        text ?? (count == null ? null : (count! > 99 ? '99+' : '$count'));
     if (label == null) return const SizedBox.shrink();
 
     return Container(

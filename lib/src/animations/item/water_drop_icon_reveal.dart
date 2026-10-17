@@ -2,6 +2,8 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../timing.dart';
+
 /// Circular reveal used by water_drop_nav_bar `IconClipper`.
 class _CircleRevealClipper extends CustomClipper<Rect> {
   _CircleRevealClipper(this.radius);
@@ -20,11 +22,6 @@ class _CircleRevealClipper extends CustomClipper<Rect> {
   bool shouldReclip(covariant _CircleRevealClipper oldClipper) {
     return oldClipper.radius != radius;
   }
-}
-
-double _interval(double t, double begin, double end) {
-  if (end <= begin) return t >= end ? 1 : 0;
-  return ((t - begin) / (end - begin)).clamp(0.0, 1.0);
 }
 
 /// Inactive outline + filled icon revealed by a falling drop
@@ -48,9 +45,11 @@ class WaterDropIconReveal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = progress.clamp(0.0, 1.0);
-    final bottomScale = selected ? lerpDouble(1.0, 0.7, _interval(t, 0.55, 1.0))! : 1.0;
-    final topScale = lerpDouble(0.7, 1.0, _interval(t, 0.55, 1.0))!;
-    final clipR = lerpDouble(0, 30, _interval(t, 0.60, 1.0))!;
+    final bottomScale = selected
+        ? lerpDouble(1.0, 0.7, intervalProgress(t, 0.55, 1.0))!
+        : 1.0;
+    final topScale = lerpDouble(0.7, 1.0, intervalProgress(t, 0.55, 1.0))!;
+    final clipR = lerpDouble(0, 30, intervalProgress(t, 0.60, 1.0))!;
     final hideOutline = t > 0.8 && selected;
     final showFilled = t > 0.6 && selected;
 
@@ -62,19 +61,13 @@ class WaterDropIconReveal extends StatelessWidget {
         children: [
           Transform.scale(
             scale: bottomScale,
-            child: Opacity(
-              opacity: hideOutline ? 0 : 1,
-              child: inactiveIcon,
-            ),
+            child: Opacity(opacity: hideOutline ? 0 : 1, child: inactiveIcon),
           ),
           Transform.scale(
             scale: topScale,
             child: ClipOval(
               clipper: _CircleRevealClipper(clipR),
-              child: Opacity(
-                opacity: showFilled ? 1 : 0,
-                child: activeIcon,
-              ),
+              child: Opacity(opacity: showFilled ? 1 : 0, child: activeIcon),
             ),
           ),
         ],

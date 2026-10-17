@@ -22,6 +22,7 @@ class TabIndicatorLayer extends StatelessWidget {
     this.slots,
     this.clipPath,
     this.customPainter,
+    this.axis = Axis.horizontal,
   });
 
   final TabIndicatorStyle animation;
@@ -34,6 +35,7 @@ class TabIndicatorLayer extends StatelessWidget {
   final TabSlotGeometry? slots;
   final Path? clipPath;
   final CustomPainter? customPainter;
+  final Axis axis;
 
   @override
   Widget build(BuildContext context) {
@@ -41,9 +43,11 @@ class TabIndicatorLayer extends StatelessWidget {
       return const SizedBox.expand();
     }
     return CustomPaint(
-      painter: customPainter ??
+      painter:
+          customPainter ??
           _IndicatorPainter(
             animation: animation,
+            axis: axis,
             selectedIndex: selectedIndex,
             previousIndex: previousIndex,
             itemCount: itemCount,
@@ -69,6 +73,7 @@ class _IndicatorPainter extends CustomPainter {
     required this.itemShape,
     this.slots,
     this.clipPath,
+    this.axis = Axis.horizontal,
   });
 
   final TabIndicatorStyle animation;
@@ -80,26 +85,32 @@ class _IndicatorPainter extends CustomPainter {
   final TabItemShape itemShape;
   final TabSlotGeometry? slots;
   final Path? clipPath;
+  final Axis axis;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (clipPath != null) {
-      canvas.save();
-      canvas.clipPath(clipPath!);
-    }
+    canvas.save();
     try {
+      if (clipPath != null) canvas.clipPath(clipPath!);
+      if (axis == Axis.vertical) {
+        canvas.translate(size.width, 0);
+        canvas.rotate(math.pi / 2);
+        size = Size(size.height, size.width);
+      }
       _paintIndicator(canvas, size);
     } finally {
-      if (clipPath != null) {
-        canvas.restore();
-      }
+      canvas.restore();
     }
   }
 
   void _paintIndicator(Canvas canvas, Size size) {
-    final geometry = slots ??
-        TabSlotGeometry.of(width: size.width, itemCount: itemCount);
-    final itemW = geometry.slotWidth;
+    final geometry =
+        slots ?? TabSlotGeometry.of(width: size.width, itemCount: itemCount);
+    final itemW = lerpDouble(
+      geometry.widthAt(previousIndex),
+      geometry.widthAt(selectedIndex),
+      progress.clamp(0.0, 1.0),
+    )!;
     final from = geometry.centerX(previousIndex);
     final to = geometry.centerX(selectedIndex);
     final cx = lerpDouble(from, to, progress)!;
@@ -115,8 +126,9 @@ class _IndicatorPainter extends CustomPainter {
       case TabIndicatorStyle.chipExpand:
       case TabIndicatorStyle.liquidBlob:
         if (itemShape == TabItemShape.none) return;
-        final widthFactor =
-            animation == TabIndicatorStyle.chipExpand ? 0.92 : 0.72;
+        final widthFactor = animation == TabIndicatorStyle.chipExpand
+            ? 0.92
+            : 0.72;
         final rect = Rect.fromCenter(
           center: Offset(cx, cy),
           width: itemW * widthFactor,
@@ -126,7 +138,8 @@ class _IndicatorPainter extends CustomPainter {
       case TabIndicatorStyle.slideLine:
       case TabIndicatorStyle.worm:
       case TabIndicatorStyle.snake:
-        final stretch = animation == TabIndicatorStyle.worm ||
+        final stretch =
+            animation == TabIndicatorStyle.worm ||
                 animation == TabIndicatorStyle.snake
             ? (1 - (progress - 0.5).abs() * 2) * itemW * 0.35
             : 0.0;
@@ -221,7 +234,8 @@ class _IndicatorPainter extends CustomPainter {
         oldDelegate.color != color ||
         oldDelegate.itemShape != itemShape ||
         oldDelegate.slots != slots ||
-        oldDelegate.clipPath != clipPath;
+        oldDelegate.clipPath != clipPath ||
+        oldDelegate.itemCount != itemCount ||
+        oldDelegate.axis != axis;
   }
 }
-

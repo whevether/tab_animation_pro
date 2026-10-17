@@ -31,8 +31,8 @@ Pure Dart — no plugins. Lottie / GIF stay in the host app.
 
 ```yaml
 dependencies:
-  tab_animation_pro: ^0.2.3
-  material_ui: ^1.6.0
+  tab_animation_pro: ^0.2.4
+  material_ui: ^1.7.0
 ```
 
 ```bash
@@ -123,8 +123,8 @@ You own selection: update `index` in `onTap` and pass it back as `currentIndex`.
 
 | Parameter | Type | Default | Meaning |
 |-----------|------|---------|---------|
-| `items` | `List<TabItem>` | required | Tabs. 2–5 is typical; even count is best for `materialNotch`. |
-| `currentIndex` | `int` | `0` | Selected index. With a `controller`, taps call `controller.jumpTo`; `currentIndex` is still the initial value. |
+| `items` | `List<TabItem>` | required | Tabs. 2–5 is typical. Empty lists hide the bar; odd counts keep a docked FAB centered. |
+| `currentIndex` | `int` | `0` | Selected index; a controller takes precedence. Out-of-range values are clamped locally to valid tabs. |
 | `onTap` | `ValueChanged<int>?` | `null` | Tap callback. Water-drop ignores taps while the drop is animating. |
 | `controller` | `TabAnimationController?` | `null` | Programmatic index. When set, taps use `jumpTo` instead of your `currentIndex` setter. |
 | `shape` | `TabBarShape` | `fixed` | Bar outline. |
@@ -135,12 +135,13 @@ You own selection: update `index` in `onTap` and pass it back as `currentIndex`.
 | `itemAnimation` | `TabItemAnimation?` | `null` | Overrides the preset item motion. `enable3D` forces `colorTween`. Water-drop forces `none` (icon reveal). |
 | `feedbackAnimation` | `TabFeedbackAnimation?` | `null` | Overrides preset feedback. Independent of water-drop (e.g. `starTwinkle` / `moonTwinkle` can coexist). |
 | `barMotion` | `TabBarMotion?` | `null` | Overrides preset path motion. |
+| `scrollController` | `ScrollController?` | `null` | Scroll view to observe for `minimizeOnScroll`; owned and disposed by the host. |
 | `enable3D` | `bool` | `false` | Perspective per item. Ignored in water-drop mode. |
 | `threeDStyle` | `Tab3DStyle` | `flip` | 3D style. |
 | `perspective` | `double` | `0.0008` | Clamped to `0.0002–0.0015`. |
-| `spring` | `TabSpringConfig` | 120 / 14 / 1 | Reserved for overshoot / liquid transitions. |
+| `spring` | `TabSpringConfig` | 120 / 14 / 1 | Spring timing for `liquidBlob` / `liquidMorph` / `blobFollow`; settles exactly at the selected tab. |
 | `respectReduceMotion` | `bool` | `true` | Honors `MediaQuery.disableAnimations`: indicator `none`, item `fade`, bar motion `none`, no 3D. |
-| `enableDragSelect` | `bool` | `false` | Horizontal fling on the bar (`\|v\| > 200`) selects the neighbor. |
+| `enableDragSelect` | `bool` | `false` | Main-axis fling (`\|v\| > 200`) selects the neighbor, including RTL and side bars. |
 | `position` | `TabBarPosition` | `bottom` | Which edge; drives path rotation and SafeArea. |
 | `height` | `double` | `64` | Bar thickness (cross-section on side bars). `minimizeOnScroll` shrinks to 55%. |
 | `backgroundColor` | `Color?` | theme | Shortcut; overrides `colors.background`. |
@@ -510,7 +511,18 @@ When `showLabels` is true every item keeps its label. `shift` / `labelReveal` / 
 | `blobFollow` | Liquid blob follows |
 | `minimizeOnScroll` | Shrinks to 55% height on downward scroll |
 
-`minimizeOnScroll` listens on the **bar**. A bar in `Scaffold.bottomNavigationBar` does **not** see `ListView` notifications from `body`. Put the bar under an ancestor of the scroll view, or drive `height` yourself.
+Pass the same `ScrollController` to the scroll view and the bar's `scrollController` to minimize a `Scaffold.bottomNavigationBar`. The host owns and disposes the controller. Without it, only notifications bubbling from the bar's subtree are observed. Reduce Motion keeps the bar at full height.
+
+```dart
+final scroll = ScrollController(); // Dispose in the host State.
+// body: ListView(controller: scroll, ...),
+// bottomNavigationBar:
+TabAnimationPro(
+  items: items,
+  barMotion: TabBarMotion.minimizeOnScroll,
+  scrollController: scroll,
+);
+```
 
 ## 3D
 
@@ -656,3 +668,5 @@ flutter run
 | Top / RTL / Reduce motion | Top bar, RTL, reduce-motion |
 
 Android release signing uses `example/jks/` (see `example/jks/README.md`). Gradle reads `example/android/key.properties`.
+
+`TabSlotGeometry.slotWidth` is the average extent; use `widthAt(index)` for odd tab counts with a center FAB. Particles repaint independently. Badges honor arbitrary `alignment` and offsets in standard local coordinates.
