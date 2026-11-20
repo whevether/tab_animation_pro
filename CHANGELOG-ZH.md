@@ -2,6 +2,15 @@
 
 [English](CHANGELOG.md)
 
+## 0.2.5
+
+- 升级 material_ui 至 ^1.11.1，示例 Gradle wrapper 升至 9.9.2。
+- 新增 `onReselect`（点击已选中 tab 时回调，无触感反馈）与 `TabFabConfig.semanticLabel`（FAB 无障碍标签）。
+- `minimizeOnScroll` 改为高度动画过渡，不再突变。
+- 新增 `TabItem.enabled` / `tooltip`；水滴模式不再丢弃快速连点。
+- `currentIndex` 改为可空：传入（且无 controller）时为受控模式，点击只回调 `onTap`。
+- `TabAnimationController.jumpTo` 立即切换；`animateTo` / `next` / `previous` 带动画。
+
 ## 0.2.4
 
 - material_ui 更新至 ^1.7.0、Gradle 更新至 9.8.1，AGP 更正为已发布的稳定版 9.4.1。

@@ -12,7 +12,15 @@ class TabItem {
     this.label,
     this.badge,
     this.semanticLabel,
+    this.enabled = true,
+    this.tooltip,
   });
+
+  /// When false the tab ignores taps and is dimmed.
+  final bool enabled;
+
+  /// Optional tooltip (hover / long press).
+  final String? tooltip;
 
   /// Inactive (or default) graphic.
   final TabGraphic icon;

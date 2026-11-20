@@ -31,8 +31,9 @@ class TabAnimationPro extends StatefulWidget {
   const TabAnimationPro({
     super.key,
     required this.items,
-    this.currentIndex = 0,
+    this.currentIndex,
     this.onTap,
+    this.onReselect,
     this.controller,
     this.shape = TabBarShape.fixed,
     this.itemShape = TabItemShape.none,
@@ -71,8 +72,15 @@ class TabAnimationPro extends StatefulWidget {
   });
 
   final List<TabItem> items;
-  final int currentIndex;
+
+  /// When non-null (and no [controller]) the bar is controlled: taps only
+  /// call [onTap]; the parent must rebuild with the new index.
+  final int? currentIndex;
   final ValueChanged<int>? onTap;
+
+  /// Called (in addition to [onTap]) when the already-selected tab is tapped,
+  /// e.g. to scroll a page back to the top. No haptic feedback is played.
+  final ValueChanged<int>? onReselect;
   final TabAnimationController? controller;
 
   final TabBarShape shape;
@@ -157,7 +165,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
   @override
   void initState() {
     super.initState();
-    _index = _validIndex(widget.controller?.index ?? widget.currentIndex);
+    _index = _validIndex(widget.controller?.index ?? widget.currentIndex ?? 0);
     _previousIndex = _index;
     _controller = AnimationController(
       vsync: this,
@@ -195,11 +203,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
     _controller.duration = widget.animationDuration;
     _progress.curve = widget.animationCurve;
     final next = _validIndex(
-      widget.controller?.index ??
-          (oldWidget.currentIndex != widget.currentIndex ||
-                  oldWidget.controller != widget.controller
-              ? widget.currentIndex
-              : _index),
+      widget.controller?.index ?? widget.currentIndex ?? _index,
     );
     _index = _validIndex(_index);
     _previousIndex = _validIndex(_previousIndex);
@@ -259,7 +263,7 @@ class _TabAnimationProState extends State<TabAnimationPro>
 
   void _onController() {
     final next = widget.controller!.index;
-    if (next != _index) _animateTo(next);
+    if (next != _index) _animateTo(next, animate: widget.controller!.animate);
   }
 
   TabAnimationPreset get _preset {
@@ -277,14 +281,14 @@ class _TabAnimationProState extends State<TabAnimationPro>
     );
   }
 
-  void _animateTo(int index) {
+  void _animateTo(int index, {bool animate = true}) {
     index = _validIndex(index);
     if (widget.items.isEmpty || index == _index) return;
     setState(() {
-      _previousIndex = _index;
+      _previousIndex = animate ? _index : index;
       _index = index;
     });
-    if (_reduceMotion) {
+    if (_reduceMotion || !animate) {
       _controller.value = 1;
     } else {
       _controller.forward(from: 0);
@@ -295,11 +299,12 @@ class _TabAnimationProState extends State<TabAnimationPro>
     if (widget.items.isEmpty || index < 0 || index >= widget.items.length) {
       return;
     }
-    final isWater =
-        widget.shape == TabBarShape.waterDrop ||
-        widget.indicatorAnimation == TabIndicatorStyle.waterDrop ||
-        widget.animation == TabAnimationStyle.waterDrop;
-    if (isWater && !_reduceMotion && _controller.isAnimating) return;
+    if (!widget.items[index].enabled) return;
+    if (index == _index) {
+      widget.onTap?.call(index);
+      widget.onReselect?.call(index);
+      return;
+    }
     final feedback = _preset.feedback;
     if (feedback == TabFeedbackAnimation.haptic ||
         feedback == TabFeedbackAnimation.elasticPop ||
@@ -308,8 +313,8 @@ class _TabAnimationProState extends State<TabAnimationPro>
     }
     widget.onTap?.call(index);
     if (widget.controller != null) {
-      widget.controller!.jumpTo(index);
-    } else {
+      widget.controller!.animateTo(index);
+    } else if (widget.currentIndex == null) {
       _animateTo(index);
     }
   }
@@ -362,452 +367,489 @@ class _TabAnimationProState extends State<TabAnimationPro>
         (effectiveIndicator == TabIndicatorStyle.waterDrop ||
             widget.shape == TabBarShape.waterDrop);
 
-    Widget bar = AnimatedBuilder(
-      animation: Listenable.merge([_progress, _fabPop]),
-      builder: (context, _) {
-        final liquid =
-            preset.indicator == TabIndicatorStyle.liquidBlob ||
-            preset.indicator == TabIndicatorStyle.liquidMorph ||
-            preset.barMotion == TabBarMotion.blobFollow;
-        final p = reduce
-            ? 1.0
-            : (isWaterDrop
-                      ? _controller.value
-                      : (liquid
-                            ? widget.spring.transform(
-                                _controller.value,
-                                widget.animationDuration,
-                              )
-                            : _progress.value))
-                  .clamp(0.0, 1.0);
-        final height = widget.height * (_minimized ? 0.55 : 1);
-        final isMaterialNotch = widget.shape == TabBarShape.materialNotch;
-        final isCurvedNotch = widget.shape == TabBarShape.curvedNotch;
-        final isNotch = isMaterialNotch || isCurvedNotch;
-        final isConvexBump =
-            widget.shape == TabBarShape.convexFixed ||
-            widget.shape == TabBarShape.convexReact ||
-            widget.shape == TabBarShape.bubble;
-        final isSDivider = widget.shape == TabBarShape.sDivider;
-        final isSCurve = widget.shape == TabBarShape.sCurve;
-        final isVertical =
-            widget.position == TabBarPosition.left ||
-            widget.position == TabBarPosition.right;
-        final reversed =
-            !isVertical && Directionality.of(context) == TextDirection.rtl;
-        final fab = widget.fabConfig;
-        final supportsFab = widget.shape.supportsDockedFab && !isVertical;
-        final showFab = supportsFab && fab.showFab;
-        final dockedCenter = showFab && fab.location.isDockedCenter;
-        final fabSize = fab.size;
-        final notchMargin = fab.margin;
-        final fabAppear = (showFab && !reduce) ? _fabAppear.value : 1.0;
-        final bumpPad = isConvexBump ? 22.0 : (isCurvedNotch ? 8.0 : 0.0);
-        final extraTop = showFab && fab.location.isOutsideTop
-            ? fabSize + fab.margin
-            : 0.0;
-        final convexBodyPad = dockedCenter
-            ? math.max(fabSize / 2, bumpPad)
-            : bumpPad;
-        final topPad =
-            extraTop +
-            (dockedCenter ? math.max(fabSize / 2, bumpPad) : bumpPad);
-        final leftInset = showFab && fab.location == TabFabLocation.left
-            ? fabSize + fab.margin
-            : 0.0;
-        final rightInset = showFab && fab.location == TabFabLocation.right
-            ? fabSize + fab.margin
-            : 0.0;
+    Widget bar = TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: _minimized ? 0.55 : 1),
+      duration: reduce ? Duration.zero : const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      builder: (context, minScale, _) => AnimatedBuilder(
+        animation: Listenable.merge([_progress, _fabPop]),
+        builder: (context, _) {
+          final liquid =
+              preset.indicator == TabIndicatorStyle.liquidBlob ||
+              preset.indicator == TabIndicatorStyle.liquidMorph ||
+              preset.barMotion == TabBarMotion.blobFollow;
+          final p = reduce
+              ? 1.0
+              : (isWaterDrop
+                        ? _controller.value
+                        : (liquid
+                              ? widget.spring.transform(
+                                  _controller.value,
+                                  widget.animationDuration,
+                                )
+                              : _progress.value))
+                    .clamp(0.0, 1.0);
+          final height = widget.height * minScale;
+          final isMaterialNotch = widget.shape == TabBarShape.materialNotch;
+          final isCurvedNotch = widget.shape == TabBarShape.curvedNotch;
+          final isNotch = isMaterialNotch || isCurvedNotch;
+          final isConvexBump =
+              widget.shape == TabBarShape.convexFixed ||
+              widget.shape == TabBarShape.convexReact ||
+              widget.shape == TabBarShape.bubble;
+          final isSDivider = widget.shape == TabBarShape.sDivider;
+          final isSCurve = widget.shape == TabBarShape.sCurve;
+          final isVertical =
+              widget.position == TabBarPosition.left ||
+              widget.position == TabBarPosition.right;
+          final reversed =
+              !isVertical && Directionality.of(context) == TextDirection.rtl;
+          final fab = widget.fabConfig;
+          final supportsFab = widget.shape.supportsDockedFab && !isVertical;
+          final showFab = supportsFab && fab.showFab;
+          final dockedCenter = showFab && fab.location.isDockedCenter;
+          final fabSize = fab.size;
+          final notchMargin = fab.margin;
+          final fabAppear = (showFab && !reduce) ? _fabAppear.value : 1.0;
+          final bumpPad = isConvexBump ? 22.0 : (isCurvedNotch ? 8.0 : 0.0);
+          final extraTop = showFab && fab.location.isOutsideTop
+              ? fabSize + fab.margin
+              : 0.0;
+          final convexBodyPad = dockedCenter
+              ? math.max(fabSize / 2, bumpPad)
+              : bumpPad;
+          final topPad =
+              extraTop +
+              (dockedCenter ? math.max(fabSize / 2, bumpPad) : bumpPad);
+          final leftInset = showFab && fab.location == TabFabLocation.left
+              ? fabSize + fab.margin
+              : 0.0;
+          final rightInset = showFab && fab.location == TabFabLocation.right
+              ? fabSize + fab.margin
+              : 0.0;
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final mq = MediaQuery.sizeOf(context);
-            final maxW = constraints.maxWidth.isFinite
-                ? constraints.maxWidth
-                : (isVertical ? height : mq.width);
-            final maxH = constraints.maxHeight.isFinite
-                ? constraints.maxHeight
-                : (isVertical ? mq.height : height + topPad);
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final mq = MediaQuery.sizeOf(context);
+              final maxW = constraints.maxWidth.isFinite
+                  ? constraints.maxWidth
+                  : (isVertical ? height : mq.width);
+              final maxH = constraints.maxHeight.isFinite
+                  ? constraints.maxHeight
+                  : (isVertical ? mq.height : height + topPad);
 
-            final isContainer = widget.shape == TabBarShape.container;
-            final resolvedTabExtent = isContainer
-                ? (widget.tabExtent ??
-                          math.min(50.0, height * 0.48).clamp(36.0, 56.0))
-                      .clamp(0.0, height)
-                : 0.0;
-            final resolvedTabCorner =
-                widget.tabCornerRadius ?? widget.cornerRadius;
+              final isContainer = widget.shape == TabBarShape.container;
+              final resolvedTabExtent = isContainer
+                  ? (widget.tabExtent ??
+                            math.min(50.0, height * 0.48).clamp(36.0, 56.0))
+                        .clamp(0.0, height)
+                  : 0.0;
+              final resolvedTabCorner =
+                  widget.tabCornerRadius ?? widget.cornerRadius;
 
-            final barW = isVertical
-                ? maxH
-                : math.max(0.0, maxW - leftInset - rightInset);
-            final barSize = isVertical
-                ? Size(maxH, height)
-                : (isConvexBump
-                      ? Size(barW, height + convexBodyPad)
-                      : Size(barW, height));
+              final barW = isVertical
+                  ? maxH
+                  : math.max(0.0, maxW - leftInset - rightInset);
+              final barSize = isVertical
+                  ? Size(maxH, height)
+                  : (isConvexBump
+                        ? Size(barW, height + convexBodyPad)
+                        : Size(barW, height));
 
-            late Path path;
-            List<Path>? pianoKeys;
-            List<Path>? pianoSeams;
-            final itemCount = math.max(widget.items.length, 1);
-            final slots = TabSlotGeometry.of(
-              width: barSize.width,
-              itemCount: itemCount,
-              location: dockedCenter
-                  ? TabFabLocation.center
-                  : TabFabLocation.none,
-              gapWidth: fab.gapWidth,
-              reversed: reversed,
-            );
-            final from = slots.centerX(_previousIndex);
-            final to = slots.centerX(_index);
-            final curvedNotchCenter = lerpDouble(from, to, p)!;
-            final pathReversed = isVertical || reversed;
-            final pathFrom = pathReversed
-                ? itemCount - 1 - _previousIndex
-                : _previousIndex;
-            final pathTo = pathReversed ? itemCount - 1 - _index : _index;
-
-            if (isContainer) {
-              // Horizontal path is rotated -90° for side bars: x=0 lands at the
-              // bottom. Column tabs still run top→bottom as 0..n-1, so flip the
-              // protrusion onto the matching visual slot.
-              final count = itemCount;
-              final itemW = barSize.width / count;
-              final fromStart = pathFrom * itemW;
-              final toStart = pathTo * itemW;
-              final start = lerpDouble(fromStart, toStart, p)!;
-              path = buildContainerTabPath(
-                size: barSize,
-                selectedIndex: pathTo,
-                itemCount: count,
-                borderRadius: widget.cornerRadius,
-                tabExtent: resolvedTabExtent,
-                tabBorderRadius: resolvedTabCorner,
-                indicatorStart: start,
-                indicatorEnd: start + itemW,
+              late Path path;
+              List<Path>? pianoKeys;
+              List<Path>? pianoSeams;
+              final itemCount = math.max(widget.items.length, 1);
+              final slots = TabSlotGeometry.of(
+                width: barSize.width,
+                itemCount: itemCount,
+                location: dockedCenter
+                    ? TabFabLocation.center
+                    : TabFabLocation.none,
+                gapWidth: fab.gapWidth,
+                reversed: reversed,
               );
-            } else if (isSCurve || isSDivider) {
-              pianoKeys = buildPianoKeyPaths(
-                size: barSize,
-                selectedIndex: pathTo,
-                previousIndex: pathFrom,
-                itemCount: widget.items.length,
-                progress: p,
-              );
-              pianoSeams = buildPianoSeamPaths(
-                size: barSize,
-                itemCount: widget.items.length,
-                selectedIndex: pathTo,
-                previousIndex: pathFrom,
-                progress: p,
-              );
-              if (pathReversed) pianoKeys = pianoKeys.reversed.toList();
-              path = Path();
-              for (final key in pianoKeys) {
-                path.addPath(key, Offset.zero);
-              }
-            } else {
-              final fabCenterX = dockedCenter
-                  ? slots.fabCenterX
-                  : barSize.width / 2;
-              path = buildTabBarPath(
-                shape: widget.shape,
-                size: barSize,
-                selectedIndex: widget.shape == TabBarShape.custom
-                    ? _index
-                    : pathTo,
-                itemCount: widget.items.length,
-                progress: barMotion == TabBarMotion.none ? 1 : p,
-                cornerRadius: widget.cornerRadius,
-                notchRadius: isMaterialNotch
-                    ? (dockedCenter ? fabSize / 2 + notchMargin : 0.0)
-                    : (isCurvedNotch ? 20.0 : fabSize * 0.62),
-                tabExtent: resolvedTabExtent,
-                tabCornerRadius: resolvedTabCorner,
-                bumpCenterX: isCurvedNotch
-                    ? (isVertical
-                          ? barSize.width - curvedNotchCenter
-                          : curvedNotchCenter)
-                    : (isMaterialNotch
-                          ? fabCenterX
-                          : (isVertical ? barSize.width - to : to)),
-                customBuilder: widget.customBarPath,
-                notchSmoothness: fab.smoothness,
-                leftCornerRadius: widget.cornerRadius,
-                rightCornerRadius: widget.cornerRadius,
-                notchAppear: isMaterialNotch && dockedCenter ? fabAppear : 1,
-              );
-              if (dockedCenter &&
-                  widget.shape.cutsFabNotch &&
-                  !isMaterialNotch) {
-                path = applyDockedFabNotch(
-                  source: path,
-                  centerX: fabCenterX,
-                  radius: fabSize / 2 + notchMargin,
-                  smoothness: fab.smoothness,
-                  appear: fabAppear,
+              final from = slots.centerX(_previousIndex);
+              final to = slots.centerX(_index);
+              final curvedNotchCenter = lerpDouble(from, to, p)!;
+              final pathReversed = isVertical || reversed;
+              final pathFrom = pathReversed
+                  ? itemCount - 1 - _previousIndex
+                  : _previousIndex;
+              final pathTo = pathReversed ? itemCount - 1 - _index : _index;
+
+              if (isContainer) {
+                // Horizontal path is rotated -90° for side bars: x=0 lands at the
+                // bottom. Column tabs still run top→bottom as 0..n-1, so flip the
+                // protrusion onto the matching visual slot.
+                final count = itemCount;
+                final itemW = barSize.width / count;
+                final fromStart = pathFrom * itemW;
+                final toStart = pathTo * itemW;
+                final start = lerpDouble(fromStart, toStart, p)!;
+                path = buildContainerTabPath(
+                  size: barSize,
+                  selectedIndex: pathTo,
+                  itemCount: count,
+                  borderRadius: widget.cornerRadius,
+                  tabExtent: resolvedTabExtent,
+                  tabBorderRadius: resolvedTabCorner,
+                  indicatorStart: start,
+                  indicatorEnd: start + itemW,
                 );
+              } else if (isSCurve || isSDivider) {
+                pianoKeys = buildPianoKeyPaths(
+                  size: barSize,
+                  selectedIndex: pathTo,
+                  previousIndex: pathFrom,
+                  itemCount: widget.items.length,
+                  progress: p,
+                );
+                pianoSeams = buildPianoSeamPaths(
+                  size: barSize,
+                  itemCount: widget.items.length,
+                  selectedIndex: pathTo,
+                  previousIndex: pathFrom,
+                  progress: p,
+                );
+                if (pathReversed) pianoKeys = pianoKeys.reversed.toList();
+                path = Path();
+                for (final key in pianoKeys) {
+                  path.addPath(key, Offset.zero);
+                }
+              } else {
+                final fabCenterX = dockedCenter
+                    ? slots.fabCenterX
+                    : barSize.width / 2;
+                path = buildTabBarPath(
+                  shape: widget.shape,
+                  size: barSize,
+                  selectedIndex: widget.shape == TabBarShape.custom
+                      ? _index
+                      : pathTo,
+                  itemCount: widget.items.length,
+                  progress: barMotion == TabBarMotion.none ? 1 : p,
+                  cornerRadius: widget.cornerRadius,
+                  notchRadius: isMaterialNotch
+                      ? (dockedCenter ? fabSize / 2 + notchMargin : 0.0)
+                      : (isCurvedNotch ? 20.0 : fabSize * 0.62),
+                  tabExtent: resolvedTabExtent,
+                  tabCornerRadius: resolvedTabCorner,
+                  bumpCenterX: isCurvedNotch
+                      ? (isVertical
+                            ? barSize.width - curvedNotchCenter
+                            : curvedNotchCenter)
+                      : (isMaterialNotch
+                            ? fabCenterX
+                            : (isVertical ? barSize.width - to : to)),
+                  customBuilder: widget.customBarPath,
+                  notchSmoothness: fab.smoothness,
+                  leftCornerRadius: widget.cornerRadius,
+                  rightCornerRadius: widget.cornerRadius,
+                  notchAppear: isMaterialNotch && dockedCenter ? fabAppear : 1,
+                );
+                if (dockedCenter &&
+                    widget.shape.cutsFabNotch &&
+                    !isMaterialNotch) {
+                  path = applyDockedFabNotch(
+                    source: path,
+                    centerX: fabCenterX,
+                    radius: fabSize / 2 + notchMargin,
+                    smoothness: fab.smoothness,
+                    appear: fabAppear,
+                  );
+                }
               }
-            }
-            if (!isVertical) {
-              final dy = isConvexBump ? extraTop : topPad;
-              if (leftInset != 0 || dy != 0) {
-                path = path.shift(Offset(leftInset, dy));
+              if (!isVertical) {
+                final dy = isConvexBump ? extraTop : topPad;
+                if (leftInset != 0 || dy != 0) {
+                  path = path.shift(Offset(leftInset, dy));
+                }
               }
-            }
-            if (isVertical) {
-              path = rotateBarPathForSide(path, Size(maxH, height));
-              if (pianoKeys != null) {
-                pianoKeys = [
-                  for (final key in pianoKeys)
-                    rotateBarPathForSide(key, Size(maxH, height)),
-                ];
-              }
-              if (pianoSeams != null) {
-                pianoSeams = [
-                  for (final seam in pianoSeams)
-                    rotateBarPathForSide(seam, Size(maxH, height)),
-                ];
-              }
-              if (widget.position == TabBarPosition.right) {
-                // Mirror so the raised edge faces inward (toward content).
-                final w = height;
-                final flip = Matrix4.diagonal3Values(-1, 1, 1);
-                path = path.transform(flip.storage);
-                path = path.shift(Offset(w, 0));
+              if (isVertical) {
+                path = rotateBarPathForSide(path, Size(maxH, height));
                 if (pianoKeys != null) {
                   pianoKeys = [
                     for (final key in pianoKeys)
-                      key.transform(flip.storage).shift(Offset(w, 0)),
+                      rotateBarPathForSide(key, Size(maxH, height)),
                   ];
                 }
                 if (pianoSeams != null) {
                   pianoSeams = [
                     for (final seam in pianoSeams)
-                      seam.transform(flip.storage).shift(Offset(w, 0)),
+                      rotateBarPathForSide(seam, Size(maxH, height)),
                   ];
                 }
+                if (widget.position == TabBarPosition.right) {
+                  // Mirror so the raised edge faces inward (toward content).
+                  final w = height;
+                  final flip = Matrix4.diagonal3Values(-1, 1, 1);
+                  path = path.transform(flip.storage);
+                  path = path.shift(Offset(w, 0));
+                  if (pianoKeys != null) {
+                    pianoKeys = [
+                      for (final key in pianoKeys)
+                        key.transform(flip.storage).shift(Offset(w, 0)),
+                    ];
+                  }
+                  if (pianoSeams != null) {
+                    pianoSeams = [
+                      for (final seam in pianoSeams)
+                        seam.transform(flip.storage).shift(Offset(w, 0)),
+                    ];
+                  }
+                }
               }
-            }
 
-            // Docked center FAB; curvedNotch disc still follows the tab.
-            final fabMain = dockedCenter
-                ? slots.fabCenterX
-                : (isCurvedNotch ? lerpDouble(from, to, p)! : 0.0);
-            final dripClipPath = !isVertical && topPad > 0
-                ? path.shift(Offset(-leftInset, -topPad))
-                : (leftInset != 0 ? path.shift(Offset(-leftInset, 0)) : path);
+              // Docked center FAB; curvedNotch disc still follows the tab.
+              final fabMain = dockedCenter
+                  ? slots.fabCenterX
+                  : (isCurvedNotch ? lerpDouble(from, to, p)! : 0.0);
+              final dripClipPath = !isVertical && topPad > 0
+                  ? path.shift(Offset(-leftInset, -topPad))
+                  : (leftInset != 0 ? path.shift(Offset(-leftInset, 0)) : path);
 
-            late final double fabLeft;
-            late final double fabTop;
-            if (showFab && !isVertical) {
-              switch (fab.location) {
-                case TabFabLocation.center:
-                  fabLeft = leftInset + fabMain - fabSize / 2;
-                  fabTop = topPad - fabSize / 2;
-                case TabFabLocation.topLeft:
-                  fabLeft = leftInset + fab.margin;
-                  fabTop = 0;
-                case TabFabLocation.topRight:
-                  fabLeft = leftInset + barW - fabSize - fab.margin;
-                  fabTop = 0;
-                case TabFabLocation.left:
-                  fabLeft = 0;
-                  fabTop = (height + topPad - fabSize) / 2;
-                case TabFabLocation.right:
-                  fabLeft = leftInset + barW + fab.margin;
-                  fabTop = (height + topPad - fabSize) / 2;
-                case TabFabLocation.none:
-                  fabLeft = 0;
-                  fabTop = 0;
+              late final double fabLeft;
+              late final double fabTop;
+              if (showFab && !isVertical) {
+                switch (fab.location) {
+                  case TabFabLocation.center:
+                    fabLeft = leftInset + fabMain - fabSize / 2;
+                    fabTop = topPad - fabSize / 2;
+                  case TabFabLocation.topLeft:
+                    fabLeft = leftInset + fab.margin;
+                    fabTop = 0;
+                  case TabFabLocation.topRight:
+                    fabLeft = leftInset + barW - fabSize - fab.margin;
+                    fabTop = 0;
+                  case TabFabLocation.left:
+                    fabLeft = 0;
+                    fabTop = (height + topPad - fabSize) / 2;
+                  case TabFabLocation.right:
+                    fabLeft = leftInset + barW + fab.margin;
+                    fabTop = (height + topPad - fabSize) / 2;
+                  case TabFabLocation.none:
+                    fabLeft = 0;
+                    fabTop = 0;
+                }
+              } else {
+                fabLeft = 0;
+                fabTop = 0;
               }
-            } else {
-              fabLeft = 0;
-              fabTop = 0;
-            }
 
-            final tabItemAnimation = isWaterDrop
-                ? TabItemAnimation.none
-                : (isCurvedNotch ? TabItemAnimation.colorTween : effectiveItem);
-            // Feedback (e.g. starTwinkle) stays independent of water-drop mode.
-            final tabFeedback = preset.feedback;
+              final tabItemAnimation = isWaterDrop
+                  ? TabItemAnimation.none
+                  : (isCurvedNotch
+                        ? TabItemAnimation.colorTween
+                        : effectiveItem);
+              // Feedback (e.g. starTwinkle) stays independent of water-drop mode.
+              final tabFeedback = preset.feedback;
 
-            Widget buildSlot(int i) {
-              return _TabSlot(
-                item: widget.items[i],
-                index: i,
-                selectedIndex: _index,
-                previousIndex: _previousIndex,
-                progress: p,
-                selected: i == _index,
-                activeColor: active,
-                inactiveColor: inactive,
-                itemAnimation: tabItemAnimation,
-                enable3D: widget.enable3D && !reduce && !isWaterDrop,
-                threeDStyle: widget.threeDStyle,
-                perspective: widget.perspective,
-                showLabels: widget.showLabels,
-                reduceMotion: reduce,
-                feedback: tabFeedback,
-                waterDropMode: isWaterDrop,
-                labelActiveColor: c.labelActive,
-                labelInactiveColor: c.labelInactive,
-                glowColor: c.glow,
-                starColor: c.star,
-                rippleColor: c.ripple,
-                onTap: () => _onTap(i),
-              );
-            }
+              Widget buildSlot(int i) {
+                return _TabSlot(
+                  item: widget.items[i],
+                  index: i,
+                  selectedIndex: _index,
+                  previousIndex: _previousIndex,
+                  progress: p,
+                  selected: i == _index,
+                  activeColor: active,
+                  inactiveColor: inactive,
+                  itemAnimation: tabItemAnimation,
+                  enable3D: widget.enable3D && !reduce && !isWaterDrop,
+                  threeDStyle: widget.threeDStyle,
+                  perspective: widget.perspective,
+                  showLabels: widget.showLabels,
+                  reduceMotion: reduce,
+                  feedback: tabFeedback,
+                  waterDropMode: isWaterDrop,
+                  labelActiveColor: c.labelActive,
+                  labelInactiveColor: c.labelInactive,
+                  glowColor: c.glow,
+                  starColor: c.star,
+                  rippleColor: c.ripple,
+                  onTap: () => _onTap(i),
+                );
+              }
 
-            final usePianoHit = (isSCurve || isSDivider) && pianoKeys != null;
-            final Widget tabs;
-            if (usePianoHit) {
-              tabs = Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  for (var i = 0; i < widget.items.length; i++)
-                    Positioned.fill(
-                      child: _PianoKeyHitTarget(
-                        path: pianoKeys[i],
+              final usePianoHit = (isSCurve || isSDivider) && pianoKeys != null;
+              final Widget tabs;
+              if (usePianoHit) {
+                tabs = Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (var i = 0; i < widget.items.length; i++)
+                      Positioned.fill(
+                        child: _PianoKeyHitTarget(
+                          path: pianoKeys[i],
+                          child: buildSlot(i),
+                        ),
+                      ),
+                  ],
+                );
+              } else {
+                tabs = Stack(
+                  children: [
+                    for (var i = 0; i < widget.items.length; i++)
+                      Positioned(
+                        left: isVertical ? 0 : slots.left(i),
+                        top: isVertical ? slots.left(i) : 0,
+                        width: isVertical
+                            ? (isContainer ? resolvedTabExtent : height)
+                            : slots.widthAt(i),
+                        height: isVertical
+                            ? slots.widthAt(i)
+                            : (isContainer ? resolvedTabExtent : height),
                         child: buildSlot(i),
                       ),
-                    ),
-                ],
-              );
-            } else {
-              tabs = Stack(
-                children: [
-                  for (var i = 0; i < widget.items.length; i++)
-                    Positioned(
-                      left: isVertical ? 0 : slots.left(i),
-                      top: isVertical ? slots.left(i) : 0,
-                      width: isVertical
-                          ? (isContainer ? resolvedTabExtent : height)
-                          : slots.widthAt(i),
-                      height: isVertical
-                          ? slots.widthAt(i)
-                          : (isContainer ? resolvedTabExtent : height),
-                      child: buildSlot(i),
-                    ),
-                ],
-              );
-            }
+                  ],
+                );
+              }
 
-            return SizedBox(
-              height: isVertical ? maxH : (height + topPad),
-              width: isVertical ? height + topPad : maxW,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned.fill(
-                    child: (isSCurve || isSDivider) && pianoKeys != null
-                        ? CustomPaint(
-                            painter: PianoKeysPainter(
-                              keys: pianoKeys,
-                              seams: pianoSeams ?? const [],
-                              selectedIndex: _index,
-                              previousIndex: _previousIndex,
-                              progress: p,
+              return SizedBox(
+                height: isVertical ? maxH : (height + topPad),
+                width: isVertical ? height + topPad : maxW,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: (isSCurve || isSDivider) && pianoKeys != null
+                          ? CustomPaint(
+                              painter: PianoKeysPainter(
+                                keys: pianoKeys,
+                                seams: pianoSeams ?? const [],
+                                selectedIndex: _index,
+                                previousIndex: _previousIndex,
+                                progress: p,
+                                color: bg,
+                                pressedColor: c.pressed,
+                                seamColor: isSDivider ? c.divider : c.pianoSeam,
+                                drawSeamsOnly: false,
+                                elevation: widget.elevation.clamp(0, 8),
+                                shadowColor: c.shadow,
+                              ),
+                              child: const SizedBox.expand(),
+                            )
+                          : TabBarSurfacePainter(
+                              path: path,
+                              surface: widget.surface,
                               color: bg,
-                              pressedColor: c.pressed,
-                              seamColor: isSDivider ? c.divider : c.pianoSeam,
-                              drawSeamsOnly: false,
-                              elevation: widget.elevation.clamp(0, 8),
+                              gradient: c.gradient,
                               shadowColor: c.shadow,
+                              elevation: widget.elevation,
+                              clipChild: false,
+                              child: const SizedBox.expand(),
                             ),
-                            child: const SizedBox.expand(),
-                          )
-                        : TabBarSurfacePainter(
-                            path: path,
-                            surface: widget.surface,
-                            color: bg,
-                            gradient: c.gradient,
-                            shadowColor: c.shadow,
-                            elevation: widget.elevation,
-                            clipChild: false,
-                            child: const SizedBox.expand(),
-                          ),
-                  ),
-                  if (showFab && !isVertical)
-                    Positioned(
-                      left: fabLeft,
-                      top: fabTop,
-                      width: fabSize,
-                      height: fabSize,
-                      child: Transform.scale(
-                        scale: fabAppear,
-                        child: Material(
-                          color: c.fab,
-                          shape: const CircleBorder(),
-                          elevation: 4,
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: _onFabTap,
-                            child: Center(
-                              child: Icon(
-                                fab.icon,
-                                color: c.fabIcon,
-                                size: fabSize * 0.5,
+                    ),
+                    if (showFab && !isVertical)
+                      Positioned(
+                        left: fabLeft,
+                        top: fabTop,
+                        width: fabSize,
+                        height: fabSize,
+                        child: Transform.scale(
+                          scale: fabAppear,
+                          child: Semantics(
+                            button: true,
+                            label: fab.semanticLabel,
+                            child: Material(
+                              color: c.fab,
+                              shape: const CircleBorder(),
+                              elevation: 4,
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: _onFabTap,
+                                child: Center(
+                                  child: Icon(
+                                    fab.icon,
+                                    color: c.fabIcon,
+                                    size: fabSize * 0.5,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  if (isCurvedNotch && !isVertical)
-                    Positioned(
-                      left: leftInset + fabMain - 3.5,
-                      top: extraTop + 2,
-                      width: 7,
-                      height: 7,
-                      child: IgnorePointer(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: indicator,
-                            shape: BoxShape.circle,
+                    if (isCurvedNotch && !isVertical)
+                      Positioned(
+                        left: leftInset + fabMain - 3.5,
+                        top: extraTop + 2,
+                        width: 7,
+                        height: 7,
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: indicator,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ),
                       ),
+                    Positioned(
+                      // Never set left+right+width or top+bottom+height together.
+                      left: isVertical
+                          ? (isContainer
+                                ? (widget.position == TabBarPosition.right
+                                      ? height - resolvedTabExtent
+                                      : 0.0)
+                                : topPad)
+                          : leftInset,
+                      top: isVertical
+                          ? 0
+                          : (isContainer || isSCurve || isSDivider
+                                ? 0
+                                : topPad),
+                      width: isVertical
+                          ? (isContainer ? resolvedTabExtent : height)
+                          : barW,
+                      height: isVertical
+                          ? null
+                          : (isContainer ? resolvedTabExtent : height),
+                      bottom: isVertical ? 0 : null,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Path / FAB is the indicator for container, piano keys, notches.
+                          if (!isContainer &&
+                              !isSCurve &&
+                              !isSDivider &&
+                              !isNotch &&
+                              !isWaterDrop)
+                            Positioned.fill(
+                              child: TabIndicatorLayer(
+                                animation: effectiveIndicator,
+                                selectedIndex: _index,
+                                previousIndex: _previousIndex,
+                                itemCount: widget.items.length,
+                                progress: p,
+                                color: indicator,
+                                itemShape: widget.itemShape,
+                                slots: slots,
+                                clipPath: isVertical ? null : dripClipPath,
+                                axis: isVertical
+                                    ? Axis.vertical
+                                    : Axis.horizontal,
+                              ),
+                            ),
+                          tabs,
+                        ],
+                      ),
                     ),
-                  Positioned(
-                    // Never set left+right+width or top+bottom+height together.
-                    left: isVertical
-                        ? (isContainer
-                              ? (widget.position == TabBarPosition.right
-                                    ? height - resolvedTabExtent
-                                    : 0.0)
-                              : topPad)
-                        : leftInset,
-                    top: isVertical
-                        ? 0
-                        : (isContainer || isSCurve || isSDivider ? 0 : topPad),
-                    width: isVertical
-                        ? (isContainer ? resolvedTabExtent : height)
-                        : barW,
-                    height: isVertical
-                        ? null
-                        : (isContainer ? resolvedTabExtent : height),
-                    bottom: isVertical ? 0 : null,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        // Path / FAB is the indicator for container, piano keys, notches.
-                        if (!isContainer &&
-                            !isSCurve &&
-                            !isSDivider &&
-                            !isNotch &&
-                            !isWaterDrop)
-                          Positioned.fill(
-                            child: TabIndicatorLayer(
-                              animation: effectiveIndicator,
+                    if (isWaterDrop)
+                      Positioned(
+                        left: isVertical ? 0 : leftInset,
+                        top: isVertical ? 0 : topPad,
+                        width: isVertical ? height : barW,
+                        height: isVertical ? maxH : height,
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: WaterDropNavPainter(
                               selectedIndex: _index,
                               previousIndex: _previousIndex,
                               itemCount: widget.items.length,
                               progress: p,
                               color: indicator,
-                              itemShape: widget.itemShape,
                               slots: slots,
                               clipPath: isVertical ? null : dripClipPath,
                               axis: isVertical
@@ -815,37 +857,15 @@ class _TabAnimationProState extends State<TabAnimationPro>
                                   : Axis.horizontal,
                             ),
                           ),
-                        tabs,
-                      ],
-                    ),
-                  ),
-                  if (isWaterDrop)
-                    Positioned(
-                      left: isVertical ? 0 : leftInset,
-                      top: isVertical ? 0 : topPad,
-                      width: isVertical ? height : barW,
-                      height: isVertical ? maxH : height,
-                      child: IgnorePointer(
-                        child: CustomPaint(
-                          painter: WaterDropNavPainter(
-                            selectedIndex: _index,
-                            previousIndex: _previousIndex,
-                            itemCount: widget.items.length,
-                            progress: p,
-                            color: indicator,
-                            slots: slots,
-                            clipPath: isVertical ? null : dripClipPath,
-                            axis: isVertical ? Axis.vertical : Axis.horizontal,
-                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
 
     if (widget.enableDragSelect && widget.items.isNotEmpty) {
@@ -1184,6 +1204,39 @@ class _TabSlot extends StatelessWidget {
       );
     }
 
+    // Anchor the badge to the icon itself (not icon + label) so it sits on the
+    // icon's corner instead of covering it.
+    final badge = item.badge;
+    if (badge != null && badge.isVisible) {
+      icon = Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          icon,
+          Positioned.fill(
+            child: Align(
+              alignment: badge.alignment,
+              child: Transform.translate(
+                offset: badge.offset,
+                child: FractionalTranslation(
+                  translation: Offset(
+                    badge.alignment.x * 0.25,
+                    badge.alignment.y * 0.25,
+                  ),
+                  child: Transform.scale(
+                    scale: feedback == TabFeedbackAnimation.badgePop && selected
+                        ? 0.85 + 0.2 * progress
+                        : 1,
+                    child: badge.build(context, state),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     // Avoid stacking 2D flip/rotate/scale on top of 3D (causes crush/warp).
     final motion = enable3D ? TabItemAnimation.colorTween : itemAnimation;
 
@@ -1234,24 +1287,7 @@ class _TabSlot extends StatelessWidget {
     Widget stack = Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.center,
-      children: [
-        body,
-        if (item.badge != null && item.badge!.isVisible)
-          Positioned.fill(
-            child: Align(
-              alignment: item.badge!.alignment,
-              child: Transform.translate(
-                offset: item.badge!.offset,
-                child: Transform.scale(
-                  scale: feedback == TabFeedbackAnimation.badgePop && selected
-                      ? 0.85 + 0.2 * progress
-                      : 1,
-                  child: item.badge!.build(context, state),
-                ),
-              ),
-            ),
-          ),
-      ],
+      children: [body],
     );
 
     stack = TabMediaScope(state: state, child: stack);
@@ -1275,8 +1311,13 @@ class _TabSlot extends StatelessWidget {
       ),
     );
 
+    if (!item.enabled) button = Opacity(opacity: 0.4, child: button);
+    if (item.tooltip != null) {
+      button = Tooltip(message: item.tooltip!, child: button);
+    }
     return Semantics(
       button: true,
+      enabled: item.enabled,
       selected: selected,
       label: item.resolvedSemanticLabel,
       child: button,

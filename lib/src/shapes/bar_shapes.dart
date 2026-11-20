@@ -24,12 +24,14 @@ Path buildTabBarPath({
   double waveAmplitude = 10,
   double tabExtent = 0,
   double tabCornerRadius = 0,
+
   /// Optional X center for notch / convex-style bumps (defaults to selected slot).
   double? bumpCenterX,
   TabBarPathBuilder? customBuilder,
   TabNotchSmoothness notchSmoothness = TabNotchSmoothness.verySmoothEdge,
   double? leftCornerRadius,
   double? rightCornerRadius,
+
   /// 0–1 scale for notch + corners (FAB appear animation).
   double notchAppear = 1,
 }) {
@@ -50,35 +52,32 @@ Path buildTabBarPath({
       return Path()..addRect(Offset.zero & size);
 
     case TabBarShape.rounded:
-      return Path()
-        ..addRRect(
-          RRect.fromRectAndCorners(
-            Offset.zero & size,
-            topLeft: Radius.circular(cornerRadius),
-            topRight: Radius.circular(cornerRadius),
-          ),
-        );
+      return Path()..addRRect(
+        RRect.fromRectAndCorners(
+          Offset.zero & size,
+          topLeft: Radius.circular(cornerRadius),
+          topRight: Radius.circular(cornerRadius),
+        ),
+      );
 
     case TabBarShape.squircle:
       return _squircle(Offset.zero & size, cornerRadius);
 
     case TabBarShape.floating:
-      return Path()
-        ..addRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(8, 4, w - 16, h - 8),
-            Radius.circular(cornerRadius),
-          ),
-        );
+      return Path()..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(8, 4, w - 16, h - 8),
+          Radius.circular(cornerRadius),
+        ),
+      );
 
     case TabBarShape.pill:
-      return Path()
-        ..addRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(12, 6, w - 24, h - 12),
-            Radius.circular(h),
-          ),
-        );
+      return Path()..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(12, 6, w - 24, h - 12),
+          Radius.circular(h),
+        ),
+      );
 
     case TabBarShape.convexFixed:
       return _convexPath(size, w / 2, convexHeight, cornerRadius);
@@ -114,13 +113,12 @@ Path buildTabBarPath({
     case TabBarShape.waterDrop:
       // Flat bar — drip animation is painted by TabIndicatorStyle.waterDrop
       // (water_drop_nav_bar style).
-      return Path()
-        ..addRRect(
-          RRect.fromRectAndRadius(
-            Offset.zero & size,
-            Radius.circular(cornerRadius * 0.35),
-          ),
-        );
+      return Path()..addRRect(
+        RRect.fromRectAndRadius(
+          Offset.zero & size,
+          Radius.circular(cornerRadius * 0.35),
+        ),
+      );
 
     case TabBarShape.container:
       return buildContainerTabPath(
@@ -142,13 +140,12 @@ Path buildTabBarPath({
       );
 
     case TabBarShape.sDivider:
-      return Path()
-        ..addRRect(
-          RRect.fromRectAndRadius(
-            Offset.zero & size,
-            Radius.circular(cornerRadius),
-          ),
-        );
+      return Path()..addRRect(
+        RRect.fromRectAndRadius(
+          Offset.zero & size,
+          Radius.circular(cornerRadius),
+        ),
+      );
 
     case TabBarShape.custom:
       return Path()..addRect(Offset.zero & size);
@@ -171,14 +168,7 @@ Path _convexPath(Size size, double centerX, double bump, double corner) {
   path.moveTo(0, top + corner);
   path.quadraticBezierTo(0, top, corner, top);
   path.lineTo(centerX - bump * 1.6, top);
-  path.cubicTo(
-    centerX - bump * 0.6,
-    top,
-    centerX - bump * 0.7,
-    0,
-    centerX,
-    0,
-  );
+  path.cubicTo(centerX - bump * 0.6, top, centerX - bump * 0.7, 0, centerX, 0);
   path.cubicTo(
     centerX + bump * 0.7,
     0,
@@ -202,14 +192,7 @@ Path _concavePath(Size size, double centerX, double depth, double corner) {
   path.moveTo(0, corner);
   path.quadraticBezierTo(0, 0, corner, 0);
   path.lineTo(centerX - depth * 2, 0);
-  path.cubicTo(
-    centerX - depth,
-    0,
-    centerX - depth,
-    depth,
-    centerX,
-    depth,
-  );
+  path.cubicTo(centerX - depth, 0, centerX - depth, depth, centerX, depth);
   path.cubicTo(
     centerX + depth,
     depth,
@@ -242,19 +225,15 @@ Path _materialNotch(
   final leftR = math.min(leftCorner, h / 2) * t;
   final rightR = math.min(rightCorner, h / 2) * t;
   if (radius <= 0 || t <= 0.001) {
-    return Path()
-      ..addRRect(
-        RRect.fromRectAndCorners(
-          Offset.zero & size,
-          topLeft: Radius.circular(leftR),
-          topRight: Radius.circular(rightR),
-        ),
-      );
+    return Path()..addRRect(
+      RRect.fromRectAndCorners(
+        Offset.zero & size,
+        topLeft: Radius.circular(leftR),
+        topRight: Radius.circular(rightR),
+      ),
+    );
   }
-  final r = math.min(
-    math.max(radius * t, 1.0),
-    math.max(0.0, (w - 16) / 2),
-  );
+  final r = math.min(math.max(radius * t, 1.0), math.max(0.0, (w - 16) / 2));
   if (r == 0) return Path()..addRect(Offset.zero & size);
   final cx = centerX.clamp(r + 8, w - r - 8);
   return _circularNotchedAndCorneredPath(
@@ -318,11 +297,7 @@ Path _circularNotchedAndCorneredPath({
   path
     ..lineTo(p[0].dx, p[0].dy)
     ..quadraticBezierTo(p[1].dx, p[1].dy, p[2].dx, p[2].dy)
-    ..arcToPoint(
-      p[3],
-      radius: Radius.circular(r),
-      clockwise: false,
-    )
+    ..arcToPoint(p[3], radius: Radius.circular(r), clockwise: false)
     ..quadraticBezierTo(p[4].dx, p[4].dy, p[5].dx, p[5].dy);
   if (rightR > 0) {
     path
@@ -432,7 +407,8 @@ Path _wavePath(
   final steps = 40;
   for (var i = 0; i <= steps; i++) {
     final x = w * i / steps;
-    final phase = (x / w) * math.pi * count + selectedIndex + progress * math.pi;
+    final phase =
+        (x / w) * math.pi * count + selectedIndex + progress * math.pi;
     final y = amplitude + math.sin(phase) * amplitude * 0.6;
     path.lineTo(x, y);
   }
@@ -449,7 +425,12 @@ Path buildTeardropPath(Offset c, double radius, {bool tipUp = true}) {
   if (tipUp) {
     final tip = Offset(c.dx, c.dy - r * 1.45);
     path.moveTo(tip.dx, tip.dy);
-    path.quadraticBezierTo(c.dx - r * 1.1, c.dy - r * 0.1, c.dx - r, c.dy + r * 0.35);
+    path.quadraticBezierTo(
+      c.dx - r * 1.1,
+      c.dy - r * 0.1,
+      c.dx - r,
+      c.dy + r * 0.35,
+    );
     path.arcToPoint(
       Offset(c.dx + r, c.dy + r * 0.35),
       radius: Radius.circular(r),
@@ -459,7 +440,12 @@ Path buildTeardropPath(Offset c, double radius, {bool tipUp = true}) {
   } else {
     final tip = Offset(c.dx, c.dy + r * 1.45);
     path.moveTo(tip.dx, tip.dy);
-    path.quadraticBezierTo(c.dx - r * 1.1, c.dy + r * 0.1, c.dx - r, c.dy - r * 0.35);
+    path.quadraticBezierTo(
+      c.dx - r * 1.1,
+      c.dy + r * 0.1,
+      c.dx - r,
+      c.dy - r * 0.35,
+    );
     path.arcToPoint(
       Offset(c.dx + r, c.dy - r * 0.35),
       radius: Radius.circular(r),
@@ -655,8 +641,7 @@ Path _containerPathFromBounds(
   rightFootR = math.min(rightFootR, math.max(0.0, w - end));
   leftFootR = math.min(leftFootR, math.max(0.0, start));
 
-  final path = Path()
-    ..moveTo(0, bodyRadius);
+  final path = Path()..moveTo(0, bodyRadius);
   _cubicCornerTL(path, bodyRadius);
   path.lineTo(w - bodyRadius, 0);
   _cubicCornerTR(path, w, bodyRadius);
@@ -670,23 +655,13 @@ Path _containerPathFromBounds(
     bodyY,
   );
   path.lineTo(end + rightFootR, bodyY);
-  _chromeRightFoot(
-    path,
-    edgeX: end,
-    bodyY: bodyY,
-    footR: rightFootR,
-  );
+  _chromeRightFoot(path, edgeX: end, bodyY: bodyY, footR: rightFootR);
   path.lineTo(end, h - tabRadius);
   _cubicTabCornerBR(path, end, h, tabRadius);
   path.lineTo(start + tabRadius, h);
   _cubicTabCornerBL(path, start, h, tabRadius);
   path.lineTo(start, bodyY + leftFootR);
-  _chromeLeftFoot(
-    path,
-    edgeX: start,
-    bodyY: bodyY,
-    footR: leftFootR,
-  );
+  _chromeLeftFoot(path, edgeX: start, bodyY: bodyY, footR: leftFootR);
   final blStartX = math.min(critical4 ?? blx, start - leftFootR);
   path.lineTo(blStartX, bodyY);
   path.cubicTo(
@@ -952,11 +927,17 @@ Path buildItemShapePath(TabItemShape shape, Rect rect) {
     case TabItemShape.leaf:
       return Path()
         ..moveTo(rect.center.dx, rect.top)
-        ..quadraticBezierTo(rect.right, rect.center.dy, rect.center.dx, rect.bottom)
+        ..quadraticBezierTo(
+          rect.right,
+          rect.center.dy,
+          rect.center.dx,
+          rect.bottom,
+        )
         ..quadraticBezierTo(rect.left, rect.center.dy, rect.center.dx, rect.top)
         ..close();
     case TabItemShape.custom:
-      return Path()..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(12)));
+      return Path()
+        ..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(12)));
   }
 }
 

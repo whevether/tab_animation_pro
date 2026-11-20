@@ -16,7 +16,11 @@ class TabFabConfig {
     this.icon = Icons.add,
     this.onTap,
     this.animateOnTap = true,
+    this.semanticLabel,
   });
+
+  /// Accessibility label / tooltip announced for the FAB.
+  final String? semanticLabel;
 
   /// [TabFabLocation.none] / [center] (docked) / outside corners and sides.
   final TabFabLocation location;
@@ -52,6 +56,7 @@ class TabFabConfig {
     IconData? icon,
     VoidCallback? onTap,
     bool? animateOnTap,
+    String? semanticLabel,
   }) {
     return TabFabConfig(
       location: location ?? this.location,
@@ -61,6 +66,7 @@ class TabFabConfig {
       icon: icon ?? this.icon,
       onTap: onTap ?? this.onTap,
       animateOnTap: animateOnTap ?? this.animateOnTap,
+      semanticLabel: semanticLabel ?? this.semanticLabel,
     );
   }
 }

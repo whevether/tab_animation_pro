@@ -140,21 +140,23 @@ class TabBadge {
         text ?? (count == null ? null : (count! > 99 ? '99+' : '$count'));
     if (label == null) return const SizedBox.shrink();
 
+    final s = size?.shortestSide ?? 16.0;
     return Container(
-      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
-      ),
+      width: s,
+      height: s,
+      decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
       alignment: Alignment.center,
-      child: Text(
-        label,
-        style: TextStyle(
-          color: fg,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          height: 1.1,
+      padding: const EdgeInsets.all(1),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: fg,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            height: 1.1,
+          ),
         ),
       ),
     );

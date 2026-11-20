@@ -1,11 +1,6 @@
 /// Position of the tab bar in the host layout.
 /// [left] / [right] match [tab_container](https://pub.dev/packages/tab_container) side edges.
-enum TabBarPosition {
-  bottom,
-  top,
-  left,
-  right,
-}
+enum TabBarPosition { bottom, top, left, right }
 
 /// Outline geometry of the entire tab bar.
 enum TabBarShape {
@@ -19,18 +14,23 @@ enum TabBarShape {
   convexFixed,
   convexReact,
   concave,
+
   /// Fixed center circular cutout + docked FAB
   /// ([animated_bottom_navigation_bar](https://pub.dev/packages/animated_bottom_navigation_bar) style).
   materialNotch,
+
   /// Softer notch + floating disc that follow the selected tab.
   curvedNotch,
   bubble,
   wave,
   waterDrop,
+
   /// Joined body + protruding selected tab with Chrome-style arc feet.
   container,
+
   /// Piano-key tabs with cubic Bezier S-curve side edges; selected key taps down then rests flush.
   sCurve,
+
   /// Piano keys with S-curve seams drawn as divider strokes.
   sDivider,
   custom,
@@ -103,20 +103,20 @@ enum TabNotchSmoothness {
 
 extension TabNotchSmoothnessCurve on TabNotchSmoothness {
   double get s1 => switch (this) {
-        TabNotchSmoothness.sharpEdge => 0.0,
-        TabNotchSmoothness.defaultEdge => 15.0,
-        TabNotchSmoothness.softEdge => 20.0,
-        TabNotchSmoothness.smoothEdge => 30.0,
-        TabNotchSmoothness.verySmoothEdge => 40.0,
-      };
+    TabNotchSmoothness.sharpEdge => 0.0,
+    TabNotchSmoothness.defaultEdge => 15.0,
+    TabNotchSmoothness.softEdge => 20.0,
+    TabNotchSmoothness.smoothEdge => 30.0,
+    TabNotchSmoothness.verySmoothEdge => 40.0,
+  };
 
   double get s2 => switch (this) {
-        TabNotchSmoothness.sharpEdge => 0.1,
-        TabNotchSmoothness.defaultEdge => 1.0,
-        TabNotchSmoothness.softEdge => 5.0,
-        TabNotchSmoothness.smoothEdge => 15.0,
-        TabNotchSmoothness.verySmoothEdge => 25.0,
-      };
+    TabNotchSmoothness.sharpEdge => 0.1,
+    TabNotchSmoothness.defaultEdge => 1.0,
+    TabNotchSmoothness.softEdge => 5.0,
+    TabNotchSmoothness.smoothEdge => 15.0,
+    TabNotchSmoothness.verySmoothEdge => 25.0,
+  };
 }
 
 /// Clip / highlight geometry for a selected tab item.
@@ -198,6 +198,7 @@ enum TabFeedbackAnimation {
   badgePop,
   haptic,
   starTwinkle,
+
   /// Crescent moons twinkle around the selected icon and label.
   moonTwinkle,
 }
@@ -242,12 +243,4 @@ enum TabAnimationStyle {
 }
 
 /// 3D transform styles (aligned with swiper_view_pro naming).
-enum Tab3DStyle {
-  cube,
-  threeD,
-  flip,
-  coverflow,
-  carousel,
-  cards,
-  rotate,
-}
+enum Tab3DStyle { cube, threeD, flip, coverflow, carousel, cards, rotate }

@@ -4,11 +4,7 @@ import 'tab_media_scope.dart';
 
 /// Provides [TabMediaState] to descendant host-built icons / badges.
 class TabMediaScope extends InheritedWidget {
-  const TabMediaScope({
-    super.key,
-    required this.state,
-    required super.child,
-  });
+  const TabMediaScope({super.key, required this.state, required super.child});
 
   final TabMediaState state;
 

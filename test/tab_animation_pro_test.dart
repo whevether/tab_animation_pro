@@ -82,11 +82,7 @@ void main() {
 
   test('piano keys assign seam midpoints to the correct key', () {
     const size = Size(400, 64);
-    final keys = buildPianoKeyPaths(
-      size: size,
-      selectedIndex: 1,
-      itemCount: 4,
-    );
+    final keys = buildPianoKeyPaths(size: size, selectedIndex: 1, itemCount: 4);
     expect(keys, hasLength(4));
     expect(keys[0].contains(const Offset(45, 32)), isTrue);
     expect(keys[1].contains(const Offset(145, 32)), isTrue);
@@ -317,8 +313,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('moonTwinkle feedback with waterDrop indicator builds',
-      (tester) async {
+  testWidgets('moonTwinkle feedback with waterDrop indicator builds', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -347,7 +344,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('outside FAB locations build without a notch gap', (tester) async {
+  testWidgets('outside FAB locations build without a notch gap', (
+    tester,
+  ) async {
     for (final loc in [
       TabFabLocation.topLeft,
       TabFabLocation.topRight,

@@ -167,9 +167,8 @@ class ResolvedTabColors {
     final inactive =
         inactiveColor ?? colors.inactive ?? scheme.onSurfaceVariant;
     final indicator = indicatorColor ?? colors.indicator ?? active;
-    final pressed = colors.pressed ??
-        Color.lerp(bg, indicator, 0.55) ??
-        indicator;
+    final pressed =
+        colors.pressed ?? Color.lerp(bg, indicator, 0.55) ?? indicator;
     return ResolvedTabColors(
       background: bg,
       active: active,

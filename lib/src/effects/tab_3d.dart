@@ -16,7 +16,8 @@ Matrix4 tab3DMatrix({
   double perspective = 0.0008,
 }) {
   // Continuous focus position while switching tabs.
-  final focus = lerpDouble(
+  final focus =
+      lerpDouble(
         previousIndex.toDouble(),
         selectedIndex.toDouble(),
         progress.clamp(0.0, 1.0),
@@ -26,7 +27,8 @@ Matrix4 tab3DMatrix({
   final distance = delta.abs();
   final toward = 1.0 - distance.clamp(0.0, 1.0); // 1 at focus, 0 one+ away
 
-  final m = Matrix4.identity()..setEntry(3, 2, perspective.clamp(0.0002, 0.0015));
+  final m = Matrix4.identity()
+    ..setEntry(3, 2, perspective.clamp(0.0002, 0.0015));
 
   switch (style) {
     case Tab3DStyle.cube:
@@ -42,7 +44,8 @@ Matrix4 tab3DMatrix({
     case Tab3DStyle.flip:
       // Flip only while switching; settled tabs stay upright.
       final animating = progress < 0.999;
-      final isLeaving = index == previousIndex && previousIndex != selectedIndex;
+      final isLeaving =
+          index == previousIndex && previousIndex != selectedIndex;
       final isEntering = index == selectedIndex;
       if (isEntering) {
         m.rotateY(animating ? (1 - progress) * math.pi : 0);
@@ -59,7 +62,12 @@ Matrix4 tab3DMatrix({
     case Tab3DStyle.carousel:
       final angle = delta * 0.32;
       m.rotateY(angle);
-      m.translateByDouble(math.sin(angle) * 10, 0, (1 - math.cos(angle)) * 16, 1);
+      m.translateByDouble(
+        math.sin(angle) * 10,
+        0,
+        (1 - math.cos(angle)) * 16,
+        1,
+      );
       final s = 0.86 + 0.14 * toward;
       m.scaleByDouble(s, s, 1, 1);
     case Tab3DStyle.cards:
@@ -70,8 +78,8 @@ Matrix4 tab3DMatrix({
     case Tab3DStyle.rotate:
       // Swing up from the bottom edge of the icon.
       final animating = progress < 0.999;
-      final active = index == selectedIndex ||
-          (animating && index == previousIndex);
+      final active =
+          index == selectedIndex || (animating && index == previousIndex);
       final tilt = active
           ? (selected ? (1 - progress) : progress) * 0.5
           : distance * 0.1;

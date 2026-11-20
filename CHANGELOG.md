@@ -2,6 +2,15 @@
 
 [中文](CHANGELOG-ZH.md)
 
+## 0.2.5
+
+- Update material_ui to ^1.11.1 and the example Gradle wrapper to 9.9.2.
+- Add `onReselect` (tap on the selected tab, no haptic) and `TabFabConfig.semanticLabel`.
+- `minimizeOnScroll` now animates the bar height instead of jumping.
+- Add `TabItem.enabled` / `tooltip`; water drop no longer drops rapid taps.
+- `currentIndex` is now nullable: when set (no controller) the bar is controlled and taps only call `onTap`.
+- `TabAnimationController.jumpTo` is instant; `animateTo` / `next` / `previous` animate.
+
 ## 0.2.4
 
 - Update material_ui to ^1.7.0 and Gradle to 9.8.1; correct AGP to the published stable 9.4.1.

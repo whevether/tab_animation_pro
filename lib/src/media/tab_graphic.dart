@@ -20,11 +20,7 @@ class TabGraphic {
     this.color,
   });
 
-  factory TabGraphic.icon(
-    IconData icon, {
-    double size = 24,
-    Color? color,
-  }) {
+  factory TabGraphic.icon(IconData icon, {double size = 24, Color? color}) {
     return TabGraphic._(iconData: icon, size: size, color: color);
   }
 

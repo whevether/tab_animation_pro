@@ -641,4 +641,132 @@ void main() {
     );
     expect(rgba, [255, 0, 0, 255]);
   });
+  testWidgets('tapping the selected tab calls onReselect, others do not', (
+    tester,
+  ) async {
+    final taps = <int>[];
+    final reselects = <int>[];
+    await tester.pumpWidget(
+      host(
+        TabAnimationPro(
+          items: items(3),
+          onTap: taps.add,
+          onReselect: reselects.add,
+        ),
+      ),
+    );
+    await tester.tap(find.text('T0'));
+    await tester.pump();
+    expect(reselects, [0]);
+    await tester.tap(find.text('T1'));
+    await tester.pumpAndSettle();
+    expect(reselects, [0]);
+    expect(taps, [0, 1]);
+  });
+  testWidgets('disabled tabs ignore taps', (tester) async {
+    final taps = <int>[];
+    await tester.pumpWidget(
+      host(
+        TabAnimationPro(
+          items: [
+            TabItem(icon: TabGraphic.icon(Icons.home), label: 'T0'),
+            TabItem(
+              icon: TabGraphic.icon(Icons.home),
+              label: 'T1',
+              enabled: false,
+            ),
+          ],
+          onTap: taps.add,
+        ),
+      ),
+    );
+    await tester.tap(find.text('T1'));
+    await tester.pumpAndSettle();
+    expect(taps, isEmpty);
+    expect(selected(tester), ['T0']);
+  });
+  testWidgets('water drop accepts rapid taps', (tester) async {
+    await tester.pumpWidget(
+      host(TabAnimationPro(items: items(3), shape: TabBarShape.waterDrop)),
+    );
+    await tester.tap(find.text('T1'));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.text('T2'));
+    await tester.pumpAndSettle();
+    expect(selected(tester), ['T2']);
+  });
+  testWidgets('currentIndex makes the bar controlled', (tester) async {
+    final taps = <int>[];
+    await tester.pumpWidget(
+      host(TabAnimationPro(items: items(3), currentIndex: 0, onTap: taps.add)),
+    );
+    await tester.tap(find.text('T2'));
+    await tester.pumpAndSettle();
+    expect(taps, [2]);
+    expect(selected(tester), ['T0']);
+  });
+  testWidgets('controller jumpTo skips animation, animateTo animates', (
+    tester,
+  ) async {
+    final c = TabAnimationController();
+    await tester.pumpWidget(
+      host(TabAnimationPro(items: items(3), controller: c)),
+    );
+    c.jumpTo(1);
+    await tester.pump();
+    expect(indicator(tester).progress, 1);
+    c.animateTo(2);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(indicator(tester).progress, lessThan(1));
+    await tester.pumpAndSettle();
+    expect(selected(tester), ['T2']);
+    await tester.pumpWidget(const SizedBox());
+    c.dispose();
+  });
+  testWidgets('FAB exposes its semantic label', (tester) async {
+    await tester.pumpWidget(
+      host(
+        TabAnimationPro(
+          items: items(2),
+          fabConfig: const TabFabConfig(semanticLabel: 'Create'),
+        ),
+      ),
+    );
+    expect(find.bySemanticsLabel('Create'), findsOneWidget);
+  });
+  testWidgets('minimizeOnScroll height animates instead of jumping', (
+    tester,
+  ) async {
+    final scroll = ScrollController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            controller: scroll,
+            children: List.generate(
+              30,
+              (i) => SizedBox(height: 80, child: Text('$i')),
+            ),
+          ),
+          bottomNavigationBar: TabAnimationPro(
+            items: items(3),
+            barMotion: TabBarMotion.minimizeOnScroll,
+            scrollController: scroll,
+            fabConfig: const TabFabConfig(location: TabFabLocation.none),
+          ),
+        ),
+      ),
+    );
+    final original = tester.getSize(find.byType(TabAnimationPro)).height;
+    scroll.jumpTo(100);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 60));
+    final mid = tester.getSize(find.byType(TabAnimationPro)).height;
+    expect(mid, lessThan(original));
+    expect(mid, greaterThan(original * 0.55));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox());
+    scroll.dispose();
+  });
 }

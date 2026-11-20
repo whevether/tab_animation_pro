@@ -7,14 +7,34 @@ import '../models/enums.dart';
 /// Rec. 709 luma-preserving saturation (s = 1.4). Applied to the backdrop
 /// after blur — the shader-free liquid-glass vibrancy recipe.
 const _kRec709Vibrancy = <double>[
-  1.3150, -0.2861, -0.0289, 0, 0,
-  -0.0850, 1.1139, -0.0289, 0, 0,
-  -0.0850, -0.2861, 1.3711, 0, 0,
-  0, 0, 0, 1, 0,
+  1.3150,
+  -0.2861,
+  -0.0289,
+  0,
+  0,
+  -0.0850,
+  1.1139,
+  -0.0289,
+  0,
+  0,
+  -0.0850,
+  -0.2861,
+  1.3711,
+  0,
+  0,
+  0,
+  0,
+  0,
+  1,
+  0,
 ];
 
 ImageFilter _glassBackdropFilter() {
-  final blur = ImageFilter.blur(sigmaX: 28, sigmaY: 28, tileMode: TileMode.clamp);
+  final blur = ImageFilter.blur(
+    sigmaX: 28,
+    sigmaY: 28,
+    tileMode: TileMode.clamp,
+  );
   return ImageFilter.compose(
     inner: blur,
     outer: const ColorFilter.matrix(_kRec709Vibrancy),
@@ -140,7 +160,8 @@ class _PathClipper extends CustomClipper<Path> {
   Path getClip(Size size) => path;
 
   @override
-  bool shouldReclip(covariant _PathClipper oldClipper) => oldClipper.path != path;
+  bool shouldReclip(covariant _PathClipper oldClipper) =>
+      oldClipper.path != path;
 }
 
 class _GlassShadowPainter extends CustomPainter {
@@ -215,23 +236,29 @@ class _GlassOverlayPainter extends CustomPainter {
 
     // Specular strip along the top edge (thick-glass highlight).
     canvas.drawRect(
-      Rect.fromLTWH(bounds.left, bounds.top, bounds.width, bounds.height * 0.38),
+      Rect.fromLTWH(
+        bounds.left,
+        bounds.top,
+        bounds.width,
+        bounds.height * 0.38,
+      ),
       Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(alpha: 0.38),
-            Colors.white.withValues(alpha: 0.0),
-          ],
-        ).createShader(
-          Rect.fromLTWH(
-            bounds.left,
-            bounds.top,
-            bounds.width,
-            bounds.height * 0.38,
-          ),
-        ),
+        ..shader =
+            LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.white.withValues(alpha: 0.38),
+                Colors.white.withValues(alpha: 0.0),
+              ],
+            ).createShader(
+              Rect.fromLTWH(
+                bounds.left,
+                bounds.top,
+                bounds.width,
+                bounds.height * 0.38,
+              ),
+            ),
     );
 
     // Edge-lit Fresnel rim (inner stroke, clipped so it sits on the glass).
@@ -298,11 +325,12 @@ class _SurfacePainter extends CustomPainter {
         paint.color = color;
         canvas.drawPath(path, paint);
       case TabBarSurface.gradient:
-        paint.shader = (gradient ??
-                LinearGradient(
-                  colors: [color, color.withValues(alpha: 0.85)],
-                ))
-            .createShader(Offset.zero & size);
+        paint.shader =
+            (gradient ??
+                    LinearGradient(
+                      colors: [color, color.withValues(alpha: 0.85)],
+                    ))
+                .createShader(Offset.zero & size);
         canvas.drawPath(path, paint);
       case TabBarSurface.glass:
         break;
